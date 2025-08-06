@@ -1,0 +1,11 @@
+{
+  "registeredAddress": {
+    "ui:widget": "textarea"
+  },
+  "authorisedSubmitter": {
+    "ui:widget": "textarea"
+  },
+  "authorisedService": {
+    "ui:widget": "textarea"
+  }
+}

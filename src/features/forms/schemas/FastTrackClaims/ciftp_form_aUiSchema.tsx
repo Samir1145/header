@@ -1,0 +1,100 @@
+const ciftp_form_aUiSchema = {
+  "ui:title": "FORM A - PUBLIC ANNOUNCEMENT",
+  "ui:description":
+    "(Under Regulation 6 of the Insolvency and Bankruptcy Board of India (Insolvency Resolution Process for Corporate Persons) Regulations, 2016)",
+  creditor_attention: {
+    "ui:autofocus": true,
+    "ui:placeholder": "Enter corporate debtor name",
+    "ui:classNames": "attention-field",
+  },
+  debtor_name: {
+    "ui:placeholder": "Full legal name of corporate debtor",
+  },
+  incorporation_date: {
+    "ui:widget": "date",
+    "ui:description": "Date of incorporation as per registration documents",
+  },
+  authority: {
+    "ui:placeholder": "e.g., Registrar of Companies",
+    "ui:description": "Government authority that registered the entity",
+  },
+  corporate_id: {
+    "ui:placeholder": "CIN/LLIN number",
+    "ui:description": "21-digit alphanumeric identifier",
+  },
+  registered_address: {
+    "ui:widget": "textarea",
+    "ui:placeholder": "Full registered office address with PIN code",
+    "ui:options": { rows: 3 },
+  },
+  insolvency_date: {
+    "ui:widget": "date",
+    "ui:description": "Date when NCLT ordered insolvency commencement",
+  },
+  closure_date: {
+    "ui:widget": "date",
+    "ui:description": "Estimated completion date of resolution process",
+  },
+  professional_name: {
+    "ui:placeholder": "Full name of IRP",
+  },
+  professional_address: {
+    "ui:widget": "textarea",
+    "ui:placeholder": "Complete address for claim submission",
+    "ui:options": { rows: 3 },
+  },
+  professional_email: {
+    "ui:widget": "email",
+    "ui:placeholder": "official@irp-email.in",
+    "ui:description": "Primary contact email for claims",
+  },
+  professional_reg_no: {
+    "ui:placeholder": "IBBI registration number",
+    "ui:description": "e.g., IBBI/IPA-001",
+  },
+  last_submission_date: {
+    "ui:widget": "date",
+    "ui:description": "14 days from IRP appointment date",
+  },
+  signature_name: {
+    "ui:placeholder": "Name of Interim Resolution Professional",
+  },
+  signature: {
+    "ui:widget": "text",
+    "ui:placeholder": "(Digital signature)",
+  },
+  signature_date: {
+    "ui:widget": "date",
+  },
+  signature_place: {
+    "ui:placeholder": "City where signed",
+  },
+  "ui:order": [
+    "creditor_attention",
+    "debtor_name",
+    "incorporation_date",
+    "authority",
+    "corporate_id",
+    "registered_address",
+    "insolvency_date",
+    "closure_date",
+    "professional_name",
+    "professional_address",
+    "professional_email",
+    "professional_reg_no",
+    "last_submission_date",
+    "signature_name",
+    "signature",
+    "signature_date",
+    "signature_place",
+  ],
+  "ui:submitButtonOptions": {
+    submitText: "Submit Public Announcement",
+    norender: false,
+    props: {
+      className: "btn btn-primary",
+    },
+  },
+};
+
+export default ciftp_form_aUiSchema;

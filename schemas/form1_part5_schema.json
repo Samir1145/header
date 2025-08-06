@@ -1,0 +1,38 @@
+{
+  "title": "Part V - Evidence of Default",
+  "type": "object",
+  "properties": {
+    "securityDetails": {
+      "type": "string",
+      "title": "Security Held (details, date, value)"
+    },
+    "courtOrder": {
+      "type": "string",
+      "title": "Order of Court/Tribunal (if any)"
+    },
+    "informationUtilityRecord": {
+      "type": "string",
+      "title": "Information Utility Record (if any)"
+    },
+    "successionCertificate": {
+      "type": "string",
+      "title": "Succession Certificate / Probate / Decree"
+    },
+    "financialContract": {
+      "type": "string",
+      "title": "Financial Contract Copy (latest)"
+    },
+    "creditInfoRecord": {
+      "type": "string",
+      "title": "Credit Information Company Record"
+    },
+    "bankersBookEntries": {
+      "type": "string",
+      "title": "Entries from Bankers Book"
+    },
+    "otherDocuments": {
+      "type": "string",
+      "title": "Other Supporting Documents"
+    }
+  }
+}

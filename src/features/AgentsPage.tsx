@@ -1,0 +1,22 @@
+import { Link } from 'react-router-dom';
+
+
+export default function AgentsPage() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+      {/* <h1 className="text-4xl font-bold mb-4">AgentsPage</h1>
+      <p className="text-lg text-muted-foreground mb-8">
+       AgentsPage
+      </p> */}
+      
+        <iframe src="http://localhost:5174/" style={{
+        border: 'none',
+        width: '100vw',
+        height: '100vh',
+      }}
+      allowFullScreen
+      title="Full Page App"></iframe>
+        
+    </div>
+  );
+}

@@ -1,0 +1,29 @@
+{
+  "title": "Part III - Interim Resolution Professional",
+  "type": "object",
+  "required": [
+    "name",
+    "email",
+    "address",
+    "registrationNumber"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email Address"
+    },
+    "address": {
+      "type": "string",
+      "title": "Address"
+    },
+    "registrationNumber": {
+      "type": "string",
+      "title": "IBBI Registration Number"
+    }
+  }
+}

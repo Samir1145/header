@@ -1,0 +1,36 @@
+{
+  "title": "Part IV - Financial Debt",
+  "type": "object",
+  "required": [
+    "totalDebt",
+    "defaultAmount",
+    "defaultDate"
+  ],
+  "properties": {
+    "totalDebt": {
+      "type": "number",
+      "title": "Total Debt Granted (\u20b9)"
+    },
+    "disbursementDates": {
+      "type": "array",
+      "title": "Date(s) of Disbursement",
+      "items": {
+        "type": "string",
+        "format": "date"
+      }
+    },
+    "defaultAmount": {
+      "type": "number",
+      "title": "Amount in Default (\u20b9)"
+    },
+    "defaultDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Date of Default"
+    },
+    "workingNote": {
+      "type": "string",
+      "title": "Attach Working Note (tabular explanation)"
+    }
+  }
+}

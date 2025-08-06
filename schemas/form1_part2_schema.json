@@ -1,0 +1,32 @@
+{
+  "title": "Part II - Corporate Debtor",
+  "type": "object",
+  "required": [
+    "debtorName",
+    "debtorId",
+    "incorporationDate"
+  ],
+  "properties": {
+    "debtorName": {
+      "type": "string",
+      "title": "Name"
+    },
+    "debtorId": {
+      "type": "string",
+      "title": "Identification Number"
+    },
+    "incorporationDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Date of Incorporation"
+    },
+    "capitalDetails": {
+      "type": "string",
+      "title": "Nominal & Paid-up Share Capital / Guarantee Clause"
+    },
+    "registeredOffice": {
+      "type": "string",
+      "title": "Registered Office Address"
+    }
+  }
+}

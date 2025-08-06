@@ -1,0 +1,8 @@
+{
+  "capitalDetails": {
+    "ui:widget": "textarea"
+  },
+  "registeredOffice": {
+    "ui:widget": "textarea"
+  }
+}

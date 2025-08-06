@@ -1,0 +1,36 @@
+{
+  "ui:order": [
+    "securityDetails",
+    "courtOrder",
+    "informationUtilityRecord",
+    "successionCertificate",
+    "financialContract",
+    "creditInfoRecord",
+    "bankersBookEntries",
+    "otherDocuments"
+  ],
+  "securityDetails": {
+    "ui:widget": "textarea"
+  },
+  "courtOrder": {
+    "ui:widget": "textarea"
+  },
+  "informationUtilityRecord": {
+    "ui:widget": "textarea"
+  },
+  "successionCertificate": {
+    "ui:widget": "textarea"
+  },
+  "financialContract": {
+    "ui:widget": "textarea"
+  },
+  "creditInfoRecord": {
+    "ui:widget": "textarea"
+  },
+  "bankersBookEntries": {
+    "ui:widget": "textarea"
+  },
+  "otherDocuments": {
+    "ui:widget": "textarea"
+  }
+}

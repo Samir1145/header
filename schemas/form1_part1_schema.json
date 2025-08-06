@@ -1,0 +1,36 @@
+{
+  "title": "Part I - Financial Creditor",
+  "type": "object",
+  "required": [
+    "name",
+    "incorporationDate",
+    "identificationNumber"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name of Financial Creditor"
+    },
+    "incorporationDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Date of Incorporation"
+    },
+    "identificationNumber": {
+      "type": "string",
+      "title": "Identification Number"
+    },
+    "registeredAddress": {
+      "type": "string",
+      "title": "Registered Office Address"
+    },
+    "authorisedSubmitter": {
+      "type": "string",
+      "title": "Authorised Submitter Name & Address"
+    },
+    "authorisedService": {
+      "type": "string",
+      "title": "Authorised Service Recipient in India"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "title": "FORM A - Public Announcement",
+  "description": "Insolvency Resolution Process Form",
+  "type": "object",
+  "properties": {
+    "creditor_attention": {
+      "type": "string",
+      "description": "For the attention of creditors of"
+    },
+    "debtor_name": {
+      "type": "string",
+      "description": "Name of Corporate Debtor"
+    },
+    "incorporation_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of Incorporation"
+    },
+    "authority": {
+      "type": "string",
+      "description": "Incorporation Authority"
+    },
+    "corporate_id": {
+      "type": "string",
+      "description": "Corporate Identity Number"
+    },
+    "registered_address": {
+      "type": "string",
+      "description": "Registered Office Address"
+    },
+    "insolvency_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Insolvency Commencement Date"
+    },
+    "closure_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Estimated Closure Date"
+    },
+    "professional_name": {
+      "type": "string",
+      "description": "IRP Name"
+    },
+    "professional_address": {
+      "type": "string",
+      "description": "IRP Address"
+    },
+    "professional_email": {
+      "type": "string",
+      "format": "email",
+      "description": "IRP Email"
+    },
+    "professional_reg_no": {
+      "type": "string",
+      "description": "IRP Registration Number"
+    },
+    "last_submission_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Last Date for Claim Submission"
+    },
+    "signature_name": {
+      "type": "string",
+      "description": "IRP Signature Name"
+    },
+    "signature": {
+      "type": "string",
+      "description": "IRP Signature"
+    },
+    "signature_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Signature Date"
+    },
+    "signature_place": {
+      "type": "string",
+      "description": "Signature Place"
+    }
+  },
+  "required": [
+    "creditor_attention",
+    "debtor_name",
+    "incorporation_date",
+    "authority",
+    "corporate_id",
+    "registered_address",
+    "insolvency_date",
+    "closure_date",
+    "professional_name",
+    "professional_address",
+    "professional_email",
+    "professional_reg_no",
+    "last_submission_date",
+    "signature_name",
+    "signature",
+    "signature_date",
+    "signature_place"
+  ]
+}

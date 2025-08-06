@@ -1,0 +1,16 @@
+{
+  "home": {
+    "headline": "Welcome to Single Page React Website",
+    "text": "Easily build fast, responsive, single-page web applications with React."
+  },
+  "services": [
+    {"name": "Design", "desc": "Elegant UI/UX design for your products."},
+    {"name": "Development", "desc": "Robust and scalable React web applications."},
+    {"name": "Support", "desc": "24/7 support for your website."}
+  ],
+  "products": [
+    {"title": "React Pro Template", "desc": "A professional starter template for your SPA."},
+    {"title": "Design Toolkit", "desc": "A complete component and icon set."}
+  ],
+  "footer": "© 2025 React Single Page Website. All rights reserved."
+}
