@@ -1,6 +1,6 @@
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState,useMemo } from 'react'
 import { throttle } from '@/lib/utils'
 import { queryFreeText, queryFreeTextStream } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
@@ -13,6 +13,8 @@ import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
 import { saveUserQnA } from '@/api/firebaseAuth'
 import { backendFreeBaseUrl3 } from '@/lib/constants'
+import { useNavigationTabsStore } from '@/stores/navigationTabs';
+import { useLocation } from 'react-router-dom';
 
 
 const generateUniqueId = () => {
@@ -50,6 +52,18 @@ export default function RetrievalTestingFree3() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const messagesContainerRef = useRef<HTMLDivElement>(null)
 
+     const allTabs = useNavigationTabsStore(state => state.tabs);
+              const location = useLocation();
+              const currentPath = location.pathname.replace(/^\/+/, '');
+            
+              // Memoize matched tab only when tabs are ready
+              const matchedTab = useMemo(() => {
+                if (allTabs.length === 0) return null;
+                return allTabs.find(tab => tab.path.replace(/^\/+/, '') === currentPath);
+              }, [allTabs, currentPath]);
+            
+              const loginUrl = matchedTab?.loginUrl || backendFreeBaseUrl3;
+        console.log('loginUrl',loginUrl)
     const scrollToBottom = useCallback(() => {
         programmaticScrollRef.current = true
         requestAnimationFrame(() => {
@@ -153,7 +167,7 @@ export default function RetrievalTestingFree3() {
 
             if (state.querySettings.stream) {
                 let streamError = ''
-                await queryFreeTextStream(backendFreeBaseUrl3,queryParams, (chunk) => {
+                await queryFreeTextStream(loginUrl,queryParams, (chunk) => {
                     fullAnswer += chunk
                     updateAssistantMessage(chunk)
                 }, (error) => {
@@ -168,7 +182,7 @@ export default function RetrievalTestingFree3() {
                     updateAssistantMessage(`\n${streamError}`, true)
                 }
             } else {
-                const response = await queryFreeText(backendFreeBaseUrl3,queryParams)
+                const response = await queryFreeText(loginUrl,queryParams)
                 fullAnswer = response.response
                 updateAssistantMessage(fullAnswer)
 

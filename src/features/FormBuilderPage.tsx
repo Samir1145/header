@@ -37,15 +37,15 @@ export default function FormBuilderPage(): JSX.Element {
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const selectedForm = selectedFormId ? findFormById(formsTree as TreeNode[], selectedFormId) : null;
-console.log('selectedFormId',selectedFormId)
-console.log('selectedForm',selectedForm)
-console.log('formData',formData)
+// console.log('selectedFormId',selectedFormId)
+// console.log('selectedForm',selectedForm)
+// console.log('formData',formData)
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f5f5' }}>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Left: Tree */}
       <div style={{
         flex: '0 0 260px',
-        background: '#fff',
+        // background: '#fff',
         borderRight: '1px solid #eee',
         padding: '28px 14px',
         overflowY: 'auto'
@@ -65,7 +65,7 @@ console.log('formData',formData)
       <div style={{
         flex: '1 1 0',
         padding: '40px 32px',
-        background: '#fafafa',
+        // background: '#fafafa',
         borderRight: '1px solid #eee',
         minWidth: 0
       }}>
@@ -80,7 +80,7 @@ console.log('formData',formData)
             />
           </>
         ) : (
-          <div style={{ color: '#888' }}>Select a form from the list.</div>
+          <div style={{  }}>Select a form from the list.</div>
         )}
       </div>
 
@@ -88,7 +88,7 @@ console.log('formData',formData)
       <div style={{
         flex: '1 1 0',
         padding: '40px 32px',
-        background: '#fff',
+        // background: '#fff',
         minWidth: 0
       }}>
         {selectedForm ? (
@@ -97,7 +97,7 @@ console.log('formData',formData)
             formData={formData}
           />
         ) : (
-          <div style={{ color: '#888' }}>Form preview will appear here.</div>
+          <div style={{ }}>Form preview will appear here.</div>
         )}
       </div>
     </div>

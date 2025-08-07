@@ -16,35 +16,37 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { firebaseLogout } from '@/api/firebaseAuth';
+import { useNavigationTabsStore } from '@/stores/navigationTabs';
 
 interface NavigationTab {
   label: string;
   value: string;
   path: string;
+  loginUrl: string;
 }
 
 const staticTabs: NavigationTab[] = [
-  { label: 'ChatIBC', value: 'askatul', path: '/retrieval' },
-  { label: 'retrieval2', value: 'retrieval2', path: '/retrieval2' },
-  { label: 'retrieval3', value: 'retrieval3', path: '/retrieval3' },
-  { label: 'AssetsIBC', value: 'askip', path: '/map' },
-  { label: 'Appeals', value: 'assets', path: '/appeals' },
-  { label: 'Agents', value: 'forms', path: '/agents' },
-  { label: 'Access', value: 'aboutus', path: '/access' },
+  { label: 'ChatIBC', value: 'askatul', path: '/retrieval', loginUrl: '' },
+  { label: 'retrieval2', value: 'retrieval2', path: '/retrieval2', loginUrl: '' },
+  { label: 'retrieval3', value: 'retrieval3', path: '/retrieval3', loginUrl: '' },
+  { label: 'AssetsIBC', value: 'askip', path: '/map', loginUrl: '' },
+  { label: 'Appeals', value: 'assets', path: '/appeals', loginUrl: '' },
+  { label: 'Agents', value: 'forms', path: '/agents', loginUrl: '' },
+  { label: 'Access', value: 'aboutus', path: '/access', loginUrl: '' },
 ];
 
 const accessExtraTabs: NavigationTab[] = [
-  { label: 'iDoc', value: 'idoc', path: '/access/idoc' },
-  { label: 'iAsk', value: 'iask', path: '/access/iask' },
-  { label: 'iGraph', value: 'igraph', path: '/access/igraph' },
-  { label: 'iLog', value: 'ilog', path: '/access/ilog' },
+  { label: 'iDoc', value: 'idoc', path: '/access/idoc', loginUrl: '' },
+  { label: 'iAsk', value: 'iask', path: '/access/iask', loginUrl: '' },
+  { label: 'iGraph', value: 'igraph', path: '/access/igraph', loginUrl: '' },
+  { label: 'iLog', value: 'ilog', path: '/access/ilog', loginUrl: '' },
 ];
 
 const pathToLabelMap: Record<string, string> = {
   '/retrieval': 'ChatIBC',
   '/retrieval2': 'retrieval2',
   '/retrieval3': 'retrieval3',
-  '/map': 'AssetsIBC', 
+  '/map': 'AssetsIBC',
   '/appeals': 'Appeals',
   '/agents': 'Agents',
   '/access': 'Access',
@@ -79,86 +81,89 @@ function NavigationItem({ tab, isActive }: { tab: NavigationTab; isActive: boole
 function NavigationMenu({ guestMode }: { guestMode: boolean }) {
   const [tabs, setTabs] = useState<NavigationTab[]>([]);
   const location = useLocation();
-useEffect(() => {
-  const fetchTabs = async () => {
-  try {
-    const docRef = doc(db, 'admin_feature_tabs', 'access_config');
-    const docSnap = await getDoc(docRef);
+  useEffect(() => {
+    const fetchTabs = async () => {
+      try {
+        const docRef = doc(db, 'admin_feature_tabs', 'access_config');
+        const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      const config = docSnap.data();
+        if (docSnap.exists()) {
+          const config = docSnap.data();
 
-      const entries = Object.entries(config)
-        .filter(([key, val]: any) => {
-          if (!val || typeof val !== 'object') return false;
+          const entries = Object.entries(config)
+            .filter(([key, val]: any) => {
+              if (!val || typeof val !== 'object') return false;
 
-          // 👇 NEW: Exclude sub-tabs whose path starts with /access/
-          const ipPath = val.ipAddress || '';
-          if (ipPath.startsWith('/access/')) return false;
+              // 👇 NEW: Exclude sub-tabs whose path starts with /access/
+              const ipPath = val.ipAddress || '';
+              if (ipPath.startsWith('/access/')) return false;
 
-          if (guestMode) return val.public;
-          return val.public || val.stakeholders || val.team || val.admin;
-        })
-        .map(([key, val]: any) => {
-          const label = val.customHeading || key;
-          const path = val.ipAddress || `/${key}`;
-          const order = val.order ?? 999;
-          return { label, value: key, path, order };
-        })
-        .sort((a, b) => a.order - b.order);
+              if (guestMode) return val.public;
+              return val.public || val.stakeholders || val.team || val.admin;
+            })
+            .map(([key, val]: any) => {
+              const label = val.customHeading || key;
+              const path = val.ipAddress || `/${key}`;
+              const order = val.order ?? 999;
+              const loginUrl = val.loginUrl || key;
 
-      setTabs(entries);
-    } else {
-      console.warn('No config found in Firebase');
-      setTabs([]);
-    }
-  } catch (err) {
-    console.error('Error loading tabs:', err);
-    setTabs([]);
-  }
-};
+              return { label, value: key, path, order, loginUrl };
+            })
+            .sort((a, b) => a.order - b.order);
+
+          setTabs(entries);
+          useNavigationTabsStore.getState().setTabs(entries);
+        } else {
+          console.warn('No config found in Firebase');
+          setTabs([]);
+        }
+      } catch (err) {
+        console.error('Error loading tabs:', err);
+        setTabs([]);
+      }
+    };
 
 
-  fetchTabs();
-}, [guestMode]);
+    fetchTabs();
+  }, [guestMode]);
 
-//   useEffect(() => {
-//    const fetchTabs = async () => {
-//   try {
-//     const docRef = doc(db, 'admin_feature_tabs', 'access_config');
-//     const docSnap = await getDoc(docRef);
+  //   useEffect(() => {
+  //    const fetchTabs = async () => {
+  //   try {
+  //     const docRef = doc(db, 'admin_feature_tabs', 'access_config');
+  //     const docSnap = await getDoc(docRef);
 
-//     if (docSnap.exists()) {
-//       const config = docSnap.data();
-//       console.log('Firebase config loaded:', config);
+  //     if (docSnap.exists()) {
+  //       const config = docSnap.data();
+  //       console.log('Firebase config loaded:', config);
 
-//       const entries = Object.entries(config)
-//         .filter(([key, val]: any) => {
-//           if (!val || typeof val !== 'object') return false;
-//           if (guestMode) return val.public;
-//           return val.public || val.stakeholders || val.team || val.admin;
-//         })
-//         .map(([key, val]: any) => {
-//           const label = val.customHeading || key;
-//           const path = val.ipAddress || `/${key}`;
-//           const order = val.order ?? 999; // fallback for sorting
-//           return { label, value: key, path, order };
-//         })
-//         .sort((a, b) => a.order - b.order); // Sort by order
+  //       const entries = Object.entries(config)
+  //         .filter(([key, val]: any) => {
+  //           if (!val || typeof val !== 'object') return false;
+  //           if (guestMode) return val.public;
+  //           return val.public || val.stakeholders || val.team || val.admin;
+  //         })
+  //         .map(([key, val]: any) => {
+  //           const label = val.customHeading || key;
+  //           const path = val.ipAddress || `/${key}`;
+  //           const order = val.order ?? 999; // fallback for sorting
+  //           return { label, value: key, path, order };
+  //         })
+  //         .sort((a, b) => a.order - b.order); // Sort by order
 
-//       setTabs(entries);
-//     } else {
-//       console.warn('No config found in Firebase');
-//       setTabs([]);
-//     }
-//   } catch (err) {
-//     console.error('Error loading tabs:', err);
-//     setTabs([]);
-//   }
-// };
+  //       setTabs(entries);
+  //     } else {
+  //       console.warn('No config found in Firebase');
+  //       setTabs([]);
+  //     }
+  //   } catch (err) {
+  //     console.error('Error loading tabs:', err);
+  //     setTabs([]);
+  //   }
+  // };
 
-//     fetchTabs();
-//   }, [guestMode]);
+  //     fetchTabs();
+  //   }, [guestMode]);
 
   return (
     <div className="flex items-center gap-2">
@@ -186,8 +191,9 @@ function AccessSubNavigation({ role }: { role?: string | null }) {
 
         if (docSnap.exists()) {
           const config = docSnap.data();
-          console.log('Access tabs config loaded:', config);
-          
+          // console.log('Access tabs config loaded:', config);
+
+          console.log('config', config)
           const updatedTabs = accessExtraTabs.map(tab => {
             let customHeading = config[tab.value]?.customHeading || config[tab.value]?.order;
             // const customPath = config[tab.value]?.ipAddress || config[tab.value]?.order;
@@ -207,7 +213,7 @@ function AccessSubNavigation({ role }: { role?: string | null }) {
               // iLog should use Logs custom heading
               customHeading = config['logs']?.customHeading || customHeading;
             }
-            
+
             const finalPath = customPath.startsWith('/') ? customPath : `/${customPath}`;
 
             let finalLabel = customHeading;
@@ -217,15 +223,22 @@ function AccessSubNavigation({ role }: { role?: string | null }) {
             if (!finalLabel) {
               finalLabel = tab.label;
             }
-            
-            console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
+            // console.log("tab.value", tab.value, "config[tab.value]", config[tab.value]);
+
+            const configEntry = Object.values(config).find(
+              (entry) => entry.ipAddress === tab.path
+            );
+            // console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
             return {
               ...tab,
               label: finalLabel,
               path: finalPath,
+              loginUrl: configEntry?.loginUrl || ''
             };
           });
+          console.log('updatedTabs', updatedTabs)
           setTabs(updatedTabs);
+          useNavigationTabsStore.getState().setAccessTabs(updatedTabs);
         } else {
           console.log('No Firebase config found for access tabs, using defaults');
           setTabs(accessExtraTabs);

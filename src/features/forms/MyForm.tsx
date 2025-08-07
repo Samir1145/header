@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { withTheme, FormProps, IChangeEvent } from '@rjsf/core';
+import { withTheme, IChangeEvent } from '@rjsf/core';
 import { Theme as Mui5Theme } from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
 import { JSONSchema7 } from 'json-schema';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import Button from '@/components/ui/Button';
+import useTheme from '@/hooks/useTheme';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
 const Form = withTheme(Mui5Theme);
 
@@ -18,100 +21,76 @@ interface MyFormProps {
 }
 
 export default function MyForm({ schema, uiSchema, formData, setFormData }: MyFormProps) {
+  const { theme } = useTheme(); // 'dark' or 'light'
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState('');
+
+  const muiTheme = createTheme({
+    palette: {
+      mode: theme === 'dark' ? 'dark' : 'light',
+    },
+  });
 
   const handleChange = ({ formData }: IChangeEvent<any>) => {
     setFormData(formData);
   };
 
   const handleSubmitOnline = async () => {
-  setSubmitting(true);
-  setSubmitMsg('');
+    setSubmitting(true);
+    setSubmitMsg('');
 
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
 
-    const metadata = {
-      formName: 'FastTrackClaimFormA', // set your form name
-      submittedBy: user?.uid || 'anonymous', // or user?.email
-      submittedAt: Timestamp.now(),
-      rawFormData: JSON.stringify(formData), // stringified full form data
-    };
+      const metadata = {
+        formName: 'FastTrackClaimFormA',
+        submittedBy: user?.uid || 'anonymous',
+        submittedAt: Timestamp.now(),
+        rawFormData: JSON.stringify(formData),
+      };
 
-    await addDoc(collection(db, 'form_submissions'), metadata);
+      await addDoc(collection(db, 'form_submissions'), metadata);
+      setSubmitMsg('✅ Data submitted to Firebase Firestore!');
+    } catch (err) {
+      console.error('Firestore submission error:', err);
+      setSubmitMsg('❌ Submission failed!');
+    }
 
-    setSubmitMsg('✅ Data submitted to Firebase Firestore!');
-  } catch (err) {
-    console.error('Firestore submission error:', err);
-    setSubmitMsg('❌ Submission failed!');
-  }
+    setSubmitting(false);
+  };
 
-  setSubmitting(false);
-};
-
-  // const handleSubmitOnline = async () => {
-  //   setSubmitting(true);
-  //   setSubmitMsg('');
-  //   try {
-  //     const response = await fetch(
-  //       'https://script.google.com/a/macros/chatibc.com/s/AKfycbyzl8tff2TAgDFbD8_qnrAdZeY6QORnElMkmJvczzYt3x3oXehPQOmja9UQUFV4MUrwbw/exec',
-  //       {
-  //         method: 'POST',
-  //         body: JSON.stringify(formData),
-  //         headers: { 'Content-Type': 'application/json' },
-  //       }
-  //     );
-  //     if (response.ok) {
-  //       setSubmitMsg('✅ Data sent to Google Sheet and email sent successfully!');
-  //     } else {
-  //       setSubmitMsg('❌ Submission failed!');
-  //     }
-  //   } catch (err) {
-  //     setSubmitMsg('❌ Submission failed!');
-  //   }
-  //   setSubmitting(false);
-  // };
-
-  // Hide default submit button
   const customUiSchema = {
     ...uiSchema,
     'ui:submitButtonOptions': { norender: true },
   };
 
   return (
-    <div>
-      <Form
-        schema={schema}
-        uiSchema={customUiSchema}
-        validator={validator}
-        formData={formData}
-        onChange={handleChange}
-        showErrorList="bottom"
-      />
-      <button
-        type="button"
-        onClick={handleSubmitOnline}
-        disabled={submitting}
-        style={{
-          marginTop: 16,
-          background: '#1976d2',
-          color: '#fff',
-          border: 'none',
-          padding: '10px 20px',
-          borderRadius: 4,
-          fontSize: 16,
-          cursor: 'pointer',
-        }}
-      >
-        {submitting ? 'Sending...' : 'Submit to Firestore'}
-      </button>
-      {submitMsg && (
-        <div style={{ marginTop: 12, color: submitMsg.startsWith('✅') ? 'green' : 'red' }}>
-          {submitMsg}
-        </div>
-      )}
-    </div>
+    <ThemeProvider theme={muiTheme}>
+      <CssBaseline />
+      <div >
+        <Form
+          schema={schema}
+          uiSchema={customUiSchema}
+          validator={validator}
+          formData={formData}
+          onChange={handleChange}
+          showErrorList="bottom"
+        />
+        <Button
+          type="button"
+          onClick={handleSubmitOnline}
+          disabled={submitting}
+          variant="default"
+        >
+          {submitting ? 'Sending...' : 'Submit to Firestore'}
+        </Button>
+        {submitMsg && (
+          <div style={{ marginTop: 12, color: submitMsg.startsWith('✅') ? 'green' : 'red' }}>
+            {submitMsg}
+          </div>
+        )}
+      </div>
+    </ThemeProvider>
   );
 }

@@ -167,3 +167,16 @@
     background-color: hsl(0 0% 0%);
   }
 }
+.form-dark-wrapper {
+  background-color: #121212;
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.form-light-wrapper {
+  background-color: #fff;
+  color: black;
+  padding: 16px;
+  border-radius: 8px;
+}

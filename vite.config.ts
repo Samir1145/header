@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  base:'/AskAtul/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {

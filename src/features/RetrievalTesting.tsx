@@ -1,6 +1,6 @@
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { throttle } from '@/lib/utils'
 import { queryText, queryTextStream } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
@@ -13,6 +13,9 @@ import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
 import { saveUserQnA } from '@/api/firebaseAuth'
 import { getAuth } from 'firebase/auth'
+import { backendBaseUrl } from '@/lib/constants'
+import { useNavigationTabsStore } from '@/stores/navigationTabs';
+import { useLocation } from 'react-router-dom';
 
 const generateUniqueId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -48,6 +51,33 @@ export default function RetrievalTesting() {
   const isReceivingResponseRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+//   const allTabs = useNavigationTabsStore(state => state.accessTabs);
+//   const location = useLocation();
+//  const currentPath = location.pathname; // e.g., '/access/iask'
+
+// const matchedTab = allTabs.find(tab => tab.path === currentPath);
+// const loginUrl = matchedTab?.loginUrl || backendBaseUrl;
+
+const allTabs = useNavigationTabsStore(state => state.accessTabs);
+      const location = useLocation();
+      const currentPath = location.pathname.replace(/^\/+/, '');
+    
+      // Memoize matched tab only when tabs are ready
+      const matchedTab = useMemo(() => {
+        if (allTabs.length === 0) return null;
+        return allTabs.find(tab => tab.path.replace(/^\/+/, '') === currentPath);
+      }, [allTabs, currentPath]);
+    
+      const loginUrl = matchedTab?.loginUrl || backendBaseUrl;
+// console.log('loginUrl',loginUrl)
+
+
+
+// console.log('allTabs', allTabs);
+// console.log('currentPath', currentPath);
+// console.log('matchedTab', matchedTab);
+// console.log('loginUrl', loginUrl);
+
 
   const scrollToBottom = useCallback(() => {
     programmaticScrollRef.current = true
@@ -153,7 +183,7 @@ export default function RetrievalTesting() {
 
       if (state.querySettings.stream) {
         let streamError = ''
-        await queryTextStream(queryParams, (chunk) => {
+        await queryTextStream(loginUrl, queryParams, (chunk) => {
           fullAnswer += chunk
           updateAssistantMessage(chunk)
         }, (error) => {
@@ -168,7 +198,7 @@ export default function RetrievalTesting() {
           updateAssistantMessage(`\n${streamError}`, true)
         }
       } else {
-        const response = await queryText(queryParams)
+        const response = await queryText(loginUrl, queryParams)
         fullAnswer = response.response
         updateAssistantMessage(fullAnswer)
 

@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+import Button from '@/components/ui/Button'
 // Import your preview components
 import FormAPreview from './schemas/FastTrackClaims/ciftp_form_aHTMLpreview';
 // import OtherFormPreview from './previews/OtherFormPreview';
@@ -52,7 +53,7 @@ console.log('formId',formId)
       <div
         ref={previewRef}
         style={{
-          background: '#fff',
+          // background: '#fff',
           padding: 24,
           borderRadius: 6,
           boxShadow: '0 2px 8px #eee',
@@ -61,22 +62,14 @@ console.log('formId',formId)
         <PreviewComponent formData={formData} />
       </div>
 
-      <button
+      <Button
         type="button"
         onClick={handleDownloadPDF}
-        style={{
-          marginTop: 20,
-          background: '#388e3c',
-          color: '#fff',
-          border: 'none',
-          padding: '10px 20px',
-          borderRadius: 4,
-          fontSize: 16,
-          cursor: 'pointer',
-        }}
+       style={{marginTop:10}}
+        variant="default"
       >
         Download PDF
-      </button>
+      </Button>
     </div>
   );
 }

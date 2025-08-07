@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import { backendBaseUrl, backendFreeBaseUrl } from '@/lib/constants'
+import { backendBaseUrl } from '@/lib/constants'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
 import { navigationService } from '@/services/navigation'
@@ -274,12 +274,15 @@ export const getDocumentsScanProgress = async (): Promise<LightragDocumentsScanP
   return response.data
 }
 
-export const queryText = async (request: QueryRequest): Promise<QueryResponse> => {
-  const response = await axiosInstance.post(backendBaseUrl + '/query', request)
+
+
+export const queryText = async (backendFreeBaseUrl:string, request: QueryRequest): Promise<QueryResponse> => {
+  const response = await axiosInstance.post(backendFreeBaseUrl + '/query', request)
   return response.data
 }
 
 export const queryTextStream = async (
+  backendFreeBaseUrl:string,
   request: QueryRequest,
   onChunk: (chunk: string) => void,
   onError?: (error: string) => void
@@ -298,7 +301,7 @@ export const queryTextStream = async (
   }
 
   try {
-    const response = await fetch(`${backendBaseUrl}/query/stream`, {
+    const response = await fetch(`${backendFreeBaseUrl}/query/stream`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(request),
@@ -322,7 +325,7 @@ export const queryTextStream = async (
       } catch { /* ignore */ }
 
       // Format error message similar to axios interceptor for consistency
-      const url = `${backendBaseUrl}/query/stream`;
+      const url = `${backendFreeBaseUrl}/query/stream`;
       throw new Error(
         `${response.status} ${response.statusText}\n${JSON.stringify(
           { error: errorBody }
