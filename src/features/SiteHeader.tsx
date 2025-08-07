@@ -171,7 +171,10 @@ function NavigationMenu({ guestMode }: { guestMode: boolean }) {
         <NavigationItem
           key={tab.value}
           tab={tab}
-          isActive={location.pathname.startsWith(tab.path)}
+          isActive={
+            location.pathname === tab.path ||
+            (tab.path.includes('access') && location.pathname.startsWith(tab.path))
+          }
         />
       ))}
     </div>
