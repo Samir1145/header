@@ -14,14 +14,17 @@ type TabAccess = {
 
 type TabDef = { key: string };
 const TABS: TabDef[] = [
-  { key: "askatul" }, { key: "askip" }, { key: "assets" }, { key: "forms" }, { key: "aboutus" },
-  { key: "graphs" }, { key: "agents" }, { key: "documents" }, { key: "wiki" }, { key: "logs" },
-  { key: "profile" }, { key: "retrival" }, { key: "retrival2" }, { key: "retrival3" }
+  { key: "assets" }, { key: "forms" }, { key: "aboutus" },
+  { key: "graphs" }, { key: "agents" }, { key: "appeals" }, { key: "documents" }, { key: "iframe" },
+  { key: "iframe2" }, { key: "retrival" }, { key: "retrival2" }, { key: "retrival3" }, { key: "/access/idoc" },
+  { key: "/access/igraph" }, { key: "/access/ilog" }, { key: "/access/iask" }
 ];
 
 const PATHS_REQUIRING_LOGIN_URL = [
-  "/map", "/retrieval", "/retrieval2", "/retrieval3", "/access/iask"
+  "/map", "/agents", "/iframe", "/iframe2",
+  "/retrieval", "/retrieval2", "/retrieval3", "/access/iask"
 ];
+
 
 const initialState: Record<string, TabAccess> = Object.fromEntries(
   TABS.map((tab) => [
@@ -48,6 +51,7 @@ const AdminTabSettings: React.FC = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const savedData = docSnap.data();
+          console.log('savedData', JSON.stringify(savedData))
           const mergedState: Record<string, TabAccess> = TABS.reduce((acc, tab, index) => {
             acc[tab.key] = {
               public: savedData[tab.key]?.public || false,
@@ -163,19 +167,18 @@ const AdminTabSettings: React.FC = () => {
                             }}
                           >
                             <option value="">Select a path...</option>
+                            <option value="/aboutus">/aboutus</option>
                             <option value="/retrieval">/retrieval</option>
                             <option value="/retrieval2">/retrieval2</option>
                             <option value="/retrieval3">/retrieval3</option>
                             <option value="/map">/map</option>
                             <option value="/appeals">/appeals</option>
                             <option value="/agents">/agents</option>
-                            <option value="/access">/access</option>
                             <option value="/forms">/forms</option>
                             <option value="/graphs">/graphs</option>
                             <option value="/documents">/documents</option>
-                            <option value="/wiki">/wiki</option>
-                            <option value="/logs">/logs</option>
-                            <option value="/profile">/profile</option>
+                            <option value="/iframe">/iframe</option>
+                            <option value="/iframe2">/iframe2</option>
                             <option value="/access/idoc">/access/idoc</option>
                             <option value="/access/iask">/access/iask</option>
                             <option value="/access/igraph">/access/igraph</option>

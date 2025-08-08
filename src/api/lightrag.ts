@@ -211,7 +211,7 @@ axiosInstance.interceptors.response.use(
     if (error.response) {
       if (error.response?.status === 401) {
         // For login API, throw error directly
-        if (error.config?.url?.includes('/login')) {
+        if (error.config?.url?.includes('/retrieval')) {
           throw error;
         }
         // For other APIs, navigate to login page

@@ -17,6 +17,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { firebaseLogout } from '@/api/firebaseAuth';
 import { useNavigationTabsStore } from '@/stores/navigationTabs';
+import LoginModal from '@/features/LoginModal'; // at top
 
 interface NavigationTab {
   label: string;
@@ -25,42 +26,6 @@ interface NavigationTab {
   loginUrl: string;
 }
 
-const staticTabs: NavigationTab[] = [
-  { label: 'ChatIBC', value: 'askatul', path: '/retrieval', loginUrl: '' },
-  { label: 'retrieval2', value: 'retrieval2', path: '/retrieval2', loginUrl: '' },
-  { label: 'retrieval3', value: 'retrieval3', path: '/retrieval3', loginUrl: '' },
-  { label: 'AssetsIBC', value: 'askip', path: '/map', loginUrl: '' },
-  { label: 'Appeals', value: 'assets', path: '/appeals', loginUrl: '' },
-  { label: 'Agents', value: 'forms', path: '/agents', loginUrl: '' },
-  { label: 'Access', value: 'aboutus', path: '/access', loginUrl: '' },
-];
-
-const accessExtraTabs: NavigationTab[] = [
-  { label: 'iDoc', value: 'idoc', path: '/access/idoc', loginUrl: '' },
-  { label: 'iAsk', value: 'iask', path: '/access/iask', loginUrl: '' },
-  { label: 'iGraph', value: 'igraph', path: '/access/igraph', loginUrl: '' },
-  { label: 'iLog', value: 'ilog', path: '/access/ilog', loginUrl: '' },
-];
-
-const pathToLabelMap: Record<string, string> = {
-  '/retrieval': 'ChatIBC',
-  '/retrieval2': 'retrieval2',
-  '/retrieval3': 'retrieval3',
-  '/map': 'AssetsIBC',
-  '/appeals': 'Appeals',
-  '/agents': 'Agents',
-  '/access': 'Access',
-  '/login': 'Login',
-  '/graphs': 'Graphs',
-  '/documents': 'Documents',
-  '/wiki': 'Wiki',
-  '/logs': 'Logs',
-  '/profile': 'Profile',
-  '/access/idoc': 'iDoc',
-  '/access/iask': 'iAsk',
-  '/access/igraph': 'iGraph',
-  '/access/ilog': 'iLog'
-};
 
 function NavigationItem({ tab, isActive }: { tab: NavigationTab; isActive: boolean }) {
   return (
@@ -78,7 +43,7 @@ function NavigationItem({ tab, isActive }: { tab: NavigationTab; isActive: boole
   );
 }
 
-function NavigationMenu({ guestMode }: { guestMode: boolean }) {
+function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string | null }) {
   const [tabs, setTabs] = useState<NavigationTab[]>([]);
   const location = useLocation();
   useEffect(() => {
@@ -96,7 +61,7 @@ function NavigationMenu({ guestMode }: { guestMode: boolean }) {
 
               // 👇 NEW: Exclude sub-tabs whose path starts with /access/
               const ipPath = val.ipAddress || '';
-              if (ipPath.startsWith('/access/')) return false;
+              // if (ipPath.startsWith('/access/')) return false;
 
               if (guestMode) return val.public;
               return val.public || val.stakeholders || val.team || val.admin;
@@ -127,44 +92,6 @@ function NavigationMenu({ guestMode }: { guestMode: boolean }) {
     fetchTabs();
   }, [guestMode]);
 
-  //   useEffect(() => {
-  //    const fetchTabs = async () => {
-  //   try {
-  //     const docRef = doc(db, 'admin_feature_tabs', 'access_config');
-  //     const docSnap = await getDoc(docRef);
-
-  //     if (docSnap.exists()) {
-  //       const config = docSnap.data();
-  //       console.log('Firebase config loaded:', config);
-
-  //       const entries = Object.entries(config)
-  //         .filter(([key, val]: any) => {
-  //           if (!val || typeof val !== 'object') return false;
-  //           if (guestMode) return val.public;
-  //           return val.public || val.stakeholders || val.team || val.admin;
-  //         })
-  //         .map(([key, val]: any) => {
-  //           const label = val.customHeading || key;
-  //           const path = val.ipAddress || `/${key}`;
-  //           const order = val.order ?? 999; // fallback for sorting
-  //           return { label, value: key, path, order };
-  //         })
-  //         .sort((a, b) => a.order - b.order); // Sort by order
-
-  //       setTabs(entries);
-  //     } else {
-  //       console.warn('No config found in Firebase');
-  //       setTabs([]);
-  //     }
-  //   } catch (err) {
-  //     console.error('Error loading tabs:', err);
-  //     setTabs([]);
-  //   }
-  // };
-
-  //     fetchTabs();
-  //   }, [guestMode]);
-
   return (
     <div className="flex items-center gap-2">
       {tabs.map(tab => (
@@ -177,97 +104,7 @@ function NavigationMenu({ guestMode }: { guestMode: boolean }) {
           }
         />
       ))}
-    </div>
-  );
-}
 
-function AccessSubNavigation({ role }: { role?: string | null }) {
-  const location = useLocation();
-  const [tabs, setTabs] = useState<NavigationTab[]>([]);
-  const isAccessPage = location.pathname.startsWith('/access');
-
-  useEffect(() => {
-    const fetchAccessTabs = async () => {
-      try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config');
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const config = docSnap.data();
-          // console.log('Access tabs config loaded:', config);
-
-          console.log('config', config)
-          const updatedTabs = accessExtraTabs.map(tab => {
-            let customHeading = config[tab.value]?.customHeading || config[tab.value]?.order;
-            // const customPath = config[tab.value]?.ipAddress || config[tab.value]?.order;
-            const customPath = config[tab.value]?.ipAddress || tab.path;
-
-            // Map admin settings to secondary header tabs
-            if (tab.value === 'idoc') {
-              // iDoc should use Documents custom heading
-              customHeading = config['documents']?.customHeading || customHeading;
-            } else if (tab.value === 'igraph') {
-              // iGraph should use Graphs custom heading
-              customHeading = config['graphs']?.customHeading || customHeading;
-            } else if (tab.value === 'iask') {
-              // iAsk should use AskAtul custom heading
-              customHeading = config['askatul']?.customHeading || customHeading;
-            } else if (tab.value === 'ilog') {
-              // iLog should use Logs custom heading
-              customHeading = config['logs']?.customHeading || customHeading;
-            }
-
-            const finalPath = customPath.startsWith('/') ? customPath : `/${customPath}`;
-
-            let finalLabel = customHeading;
-            if (!finalLabel && customPath !== tab.path) {
-              finalLabel = pathToLabelMap[customPath] || tab.label;
-            }
-            if (!finalLabel) {
-              finalLabel = tab.label;
-            }
-            // console.log("tab.value", tab.value, "config[tab.value]", config[tab.value]);
-
-            const configEntry = Object.values(config).find(
-              (entry) => entry.ipAddress === tab.path
-            );
-            // console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
-            return {
-              ...tab,
-              label: finalLabel,
-              path: finalPath,
-              loginUrl: configEntry?.loginUrl || ''
-            };
-          });
-          console.log('updatedTabs', updatedTabs)
-          setTabs(updatedTabs);
-          useNavigationTabsStore.getState().setAccessTabs(updatedTabs);
-        } else {
-          console.log('No Firebase config found for access tabs, using defaults');
-          setTabs(accessExtraTabs);
-        }
-      } catch (error) {
-        console.error('Error fetching access tabs config:', error);
-        setTabs(accessExtraTabs);
-      }
-    };
-
-    if (isAccessPage) {
-      fetchAccessTabs();
-    }
-  }, [isAccessPage]);
-
-  if (!isAccessPage) return null;
-
-  return (
-    <div className="flex justify-end items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
-      {tabs.map(tab => (
-        <NavigationItem
-          key={tab.value}
-          tab={tab}
-          isActive={location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)}
-        />
-      ))}
       {role === 'admin' && (
         <NavLink
           to="/access/admin-features"
@@ -285,13 +122,118 @@ function AccessSubNavigation({ role }: { role?: string | null }) {
   );
 }
 
+// function AccessSubNavigation({ role }: { role?: string | null }) {
+//   const location = useLocation();
+//   const [tabs, setTabs] = useState<NavigationTab[]>([]);
+//   const isAccessPage = location.pathname.startsWith('/access');
+
+//   useEffect(() => {
+//     const fetchAccessTabs = async () => {
+//       try {
+//         const docRef = doc(db, 'admin_feature_tabs', 'access_config');
+//         const docSnap = await getDoc(docRef);
+
+//         if (docSnap.exists()) {
+//           const config = docSnap.data();
+//           // console.log('Access tabs config loaded:', config);
+
+//           console.log('config', config)
+//           const updatedTabs = accessExtraTabs.map(tab => {
+//             let customHeading = config[tab.value]?.customHeading || config[tab.value]?.order;
+//             // const customPath = config[tab.value]?.ipAddress || config[tab.value]?.order;
+//             const customPath = config[tab.value]?.ipAddress || tab.path;
+
+//             // Map admin settings to secondary header tabs
+//             if (tab.value === 'idoc') {
+//               // iDoc should use Documents custom heading
+//               customHeading = config['documents']?.customHeading || customHeading;
+//             } else if (tab.value === 'igraph') {
+//               // iGraph should use Graphs custom heading
+//               customHeading = config['graphs']?.customHeading || customHeading;
+//             } else if (tab.value === 'iask') {
+//               // iAsk should use AskAtul custom heading
+//               customHeading = config['askatul']?.customHeading || customHeading;
+//             } else if (tab.value === 'ilog') {
+//               // iLog should use Logs custom heading
+//               customHeading = config['logs']?.customHeading || customHeading;
+//             }
+
+//             const finalPath = customPath.startsWith('/') ? customPath : `/${customPath}`;
+
+//             let finalLabel = customHeading;
+//             if (!finalLabel && customPath !== tab.path) {
+//               finalLabel = pathToLabelMap[customPath] || tab.label;
+//             }
+//             if (!finalLabel) {
+//               finalLabel = tab.label;
+//             }
+//             // console.log("tab.value", tab.value, "config[tab.value]", config[tab.value]);
+
+//             const configEntry = Object.values(config).find(
+//               (entry) => entry.ipAddress === tab.path
+//             );
+//             // console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
+//             return {
+//               ...tab,
+//               label: finalLabel,
+//               path: finalPath,
+//               loginUrl: configEntry?.loginUrl || ''
+//             };
+//           });
+//           console.log('updatedTabs', updatedTabs)
+//           setTabs(updatedTabs);
+//           useNavigationTabsStore.getState().setAccessTabs(updatedTabs);
+//         } else {
+//           console.log('No Firebase config found for access tabs, using defaults');
+//           setTabs(accessExtraTabs);
+//         }
+//       } catch (error) {
+//         console.error('Error fetching access tabs config:', error);
+//         setTabs(accessExtraTabs);
+//       }
+//     };
+
+//     if (isAccessPage) {
+//       fetchAccessTabs();
+//     }
+//   }, [isAccessPage]);
+
+//   if (!isAccessPage) return null;
+
+//   return (
+//     <div className="flex justify-end items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
+//       {tabs.map(tab => (
+//         <NavigationItem
+//           key={tab.value}
+//           tab={tab}
+//           isActive={location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)}
+//         />
+//       ))}
+//       {role === 'admin' && (
+//         <NavLink
+//           to="/access/admin-features"
+//           className={cn(
+//             'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+//             location.pathname.startsWith('/access/admin-features')
+//               ? 'bg-emerald-400 text-white'
+//               : 'text-muted-foreground hover:bg-accent'
+//           )}
+//         >
+//           Admin
+//         </NavLink>
+//       )}
+//     </div>
+//   );
+// }
+
 export default function SiteHeader({ guestMode = false }: { guestMode?: boolean }) {
   const { t } = useTranslation();
   const { role, plan, username, webuiTitle, webuiDescription } = useAuthStore();
 
+const [showLogin, setShowLogin] = useState(false);
   return (
     <>
-      <header className="border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex h-16 w-full items-center justify-between px-4">
+      <header className="border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex  w-full items-center justify-between p-4">
         {/* Left side - Logo + Branding */}
         <div className="flex items-center min-w-[200px]">
           <NavLink to={guestMode ? "/" : "/access"} className="flex items-center gap-2">
@@ -319,12 +261,12 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
 
         {/* Center - Navigation Tabs */}
         <div className="flex flex-1 justify-center items-center">
-          <NavigationMenu guestMode={guestMode} />
-          {guestMode && (
+          <NavigationMenu guestMode={guestMode} role={role} />
+          {/* {guestMode && (
             <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-md">
               {t('login.guestMode', 'Guest Mode')}
             </span>
-          )}
+          )} */}
         </div>
 
         {/* Right - Actions */}
@@ -347,12 +289,21 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
               <LogOutIcon className="h-4 w-4" />
             </button>
           ) : (
-            <Link to="/login" className="text-sm hover:underline">Login</Link>
+            <>
+             <button
+      onClick={() => setShowLogin(true)}
+      className="text-sm hover:underline"
+    >
+      Login
+    </button>
+    <LoginModal open={showLogin} onOpenChange={setShowLogin} />
+            {/* <Link to="/login" className="text-sm hover:underline">Login</Link> */}
+            </>
           )}
         </div>
       </header>
-
-      <AccessSubNavigation role={role} />
+{/* 
+      <AccessSubNavigation role={role} /> */}
     </>
   );
 }

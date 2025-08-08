@@ -76,7 +76,7 @@ class NavigationService {
     await firebaseLogout();
 
     // Navigate to login
-    this.navigate('/login');
+    this.navigate('/retrieval');
   }
 
   navigateToHome() {

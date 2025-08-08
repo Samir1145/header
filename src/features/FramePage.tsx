@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNavigationTabsStore } from '@/stores/navigationTabs';
 
-export default function AgentsPage() {
+export default function FramePage() {
   const allTabs = useNavigationTabsStore(state => state.tabs);
   const location = useLocation();
 

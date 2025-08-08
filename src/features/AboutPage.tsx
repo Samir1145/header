@@ -10,7 +10,7 @@ export default function AboutPage() {
   };
 
   useEffect(() => {
-    fetch("/content.json")
+    fetch("content.json")
       .then(res => res.json())
       .then(setData);
   }, []);

@@ -22,6 +22,8 @@ import { useLocation } from 'react-router-dom';
 import FormBuilderPage from '@/features/FormBuilderPage';
 import RetrievalTestingFree2 from './features/RetrievalTestingFree2';
 import RetrievalTestingFree3 from './features/RetrievalTestingFree3';
+import FramePage from '@/features/FramePage';
+import FramePage2 from '@/features/FramePage2';
 
 
 function RequireProPlan({ children }: { children: React.ReactNode }) {
@@ -43,9 +45,9 @@ export default function AppRouter() {
       <Router>
         <Routes>
           {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          {/* <Route path="/login" element={<LoginPage />} /> */}
+          {/* <Route path="/register" element={<RegisterPage />} /> */}
+          {/* <Route path="/forgot-password" element={<ForgotPasswordPage />} /> */}
 
           {/* <Route path="/about" element={<AboutPage />} /> */}
 
@@ -58,6 +60,9 @@ export default function AppRouter() {
             <Route path="map" element={<UshahidiMapPage />} />
             <Route path="appeals" element={<AboutPage />} />
             <Route path="agents" element={<AgentsPage />} />
+            <Route path="iframe" element={<FramePage />} />
+            <Route path="iframe2" element={<FramePage2 />} />
+            <Route path="aboutus" element={<AboutPage />} />
 
             {/* Protected pro plan /access routes */}
             {/* <Route
@@ -69,7 +74,7 @@ export default function AppRouter() {
               }
             > */}
 
-            <Route path="forms" element={<RequireProPlan><FormBuilderPage /></RequireProPlan>} />
+            <Route path="forms" element={<FormBuilderPage />} />
 
             <Route path="/access" element={<RequireProPlan><Navigate to="/access/idoc" replace /></RequireProPlan>} />
             <Route path="access/iask" element={<RequireProPlan><RetrievalTesting /></RequireProPlan>} />
