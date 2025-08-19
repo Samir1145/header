@@ -7,35 +7,57 @@ type TabAccess = {
   public: boolean;
   admin: boolean;
   customHeading: string;
+  subtitle1: string;
+  subtitle2: string;
+  subtitle3: string;
+  url1: string;
+  url2: string;
+  url3: string;
   ipAddress: string;
   order: number;
-  loginUrl?: string; // ✅ New field
 };
 
 type TabDef = { key: string };
 const TABS: TabDef[] = [
   { key: "assets" }, { key: "forms" }, { key: "aboutus" },
-  { key: "graphs" }, { key: "agents" }, { key: "appeals" }, { key: "documents" }, { key: "iframe" },
-  { key: "iframe2" }, { key: "retrival" }, { key: "retrival2" }, { key: "retrival3" }, { key: "/access/idoc" },
-  { key: "/access/igraph" }, { key: "/access/ilog" }, { key: "/access/iask" }
+  { key: "graphs" }, { key: "agents" }, { key: "appeals" }
 ];
 
-const PATHS_REQUIRING_LOGIN_URL = [
-  "/map", "/agents", "/iframe", "/iframe2",
-  "/retrieval", "/retrieval2", "/retrieval3", "/access/iask"
+const URL_OPTIONS = [
+  { value: "", label: "Select a path..." },
+  { value: "/aboutus", label: "/aboutus" },
+  { value: "/retrieval", label: "/retrieval" },
+  { value: "/retrieval2", label: "/retrieval2" },
+  { value: "/retrieval3", label: "/retrieval3" },
+  { value: "/map", label: "/map" },
+  { value: "/appeals", label: "/appeals" },
+  { value: "/agents", label: "/agents" },
+  { value: "/forms", label: "/forms" },
+  { value: "/graphs", label: "/graphs" },
+  { value: "/documents", label: "/documents" },
+  { value: "/iframe", label: "/iframe" },
+  { value: "/iframe2", label: "/iframe2" },
+  { value: "/access/idoc", label: "/access/idoc" },
+  { value: "/access/iask", label: "/access/iask" },
+  { value: "/access/igraph", label: "/access/igraph" },
+  { value: "/access/ilog", label: "/access/ilog" }
 ];
-
 
 const initialState: Record<string, TabAccess> = Object.fromEntries(
-  TABS.map((tab) => [
+  TABS.map((tab, index) => [
     tab.key,
     {
       public: false,
       admin: false,
       customHeading: "",
+      subtitle1: "",
+      subtitle2: "",
+      subtitle3: "",
+      url1: "",
+      url2: "",
+      url3: "",
       ipAddress: "",
-      order: 0,
-      loginUrl: ""
+      order: index,
     },
   ])
 );
@@ -51,15 +73,19 @@ const AdminTabSettings: React.FC = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const savedData = docSnap.data();
-          console.log('savedData', JSON.stringify(savedData))
           const mergedState: Record<string, TabAccess> = TABS.reduce((acc, tab, index) => {
             acc[tab.key] = {
               public: savedData[tab.key]?.public || false,
               admin: savedData[tab.key]?.admin || false,
               customHeading: savedData[tab.key]?.customHeading || '',
+              subtitle1: savedData[tab.key]?.subtitle1 || '',
+              subtitle2: savedData[tab.key]?.subtitle2 || '',
+              subtitle3: savedData[tab.key]?.subtitle3 || '',
+              url1: savedData[tab.key]?.url1 || '',
+              url2: savedData[tab.key]?.url2 || '',
+              url3: savedData[tab.key]?.url3 || '',
               ipAddress: savedData[tab.key]?.ipAddress || '',
-              loginUrl: savedData[tab.key]?.loginUrl || '',
-              order: index
+              order: savedData[tab.key]?.order !== undefined ? savedData[tab.key].order : index
             };
             return acc;
           }, {} as Record<string, TabAccess>);
@@ -75,7 +101,7 @@ const AdminTabSettings: React.FC = () => {
   }, []);
 
   const handleCheck =
-    (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "ipAddress" | "loginUrl">) =>
+    (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "url1" | "url2" | "url3" | "ipAddress">) =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -84,7 +110,7 @@ const AdminTabSettings: React.FC = () => {
       };
 
   const handleText =
-    (tabKey: string, field: "customHeading" | "ipAddress" | "loginUrl") =>
+    (tabKey: string, field: "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "ipAddress") =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -92,19 +118,16 @@ const AdminTabSettings: React.FC = () => {
         }));
       };
 
-  const handleSave = async () => {
-    // ✅ Validate all selected paths that require loginUrl
-    for (const tabKey of Object.keys(tabState)) {
-      const config = tabState[tabKey];
-      if (
-        PATHS_REQUIRING_LOGIN_URL.includes(config.ipAddress) &&
-        (!config.loginUrl || config.loginUrl.trim() === "")
-      ) {
-        toast.error(`URL is required for tab: ${tabKey}`);
-        return;
-      }
-    }
+  const handleSelect =
+    (tabKey: string, field: "url1" | "url2" | "url3") =>
+      (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setTabState((prev) => ({
+          ...prev,
+          [tabKey]: { ...prev[tabKey], [field]: e.target.value },
+        }));
+      };
 
+  const handleSave = async () => {
     setIsSaving(true);
     try {
       await setDoc(doc(db, 'admin_feature_tabs', 'access_config'), tabState);
@@ -131,81 +154,144 @@ const AdminTabSettings: React.FC = () => {
             <table className="min-w-full text-sm text-left">
               <thead style={{ background: "#f1f5f9", color: "#374151" }}>
                 <tr>
-                  <th className="px-4 py-3">Tabs</th>
+                  <th className="px-4 py-3">Index</th>
+                  <th className="px-4 py-3">Title</th>
+                  <th className="px-4 py-3">Sub Title</th>
+                  <th className="px-4 py-3">URL</th>
+                  <th className="px-4 py-3">IP Address</th>
                   <th className="px-4 py-3 text-center">Public</th>
                   <th className="px-4 py-3 text-center">IP-Admin</th>
                 </tr>
               </thead>
               <tbody>
                 {TABS.map((tab, index) => {
-                  const selectedPath = tabState[tab.key]?.ipAddress;
-                  const showLoginField = PATHS_REQUIRING_LOGIN_URL.includes(selectedPath);
-
+                  const config = tabState[tab.key];
+                  
                   return (
                     <tr key={tab.key} style={{ borderTop: "1px solid #e5e7eb" }}>
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        <div className="font-semibold text-gray-700">{index + 1}.</div>
-                        <div style={{ display: "flex", gap: "0.5rem", flexDirection: "row", flexWrap: "wrap" }}>
+                      <td className="px-4 py-3 text-center font-medium text-gray-900">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          className="heading"
+                          value={config.customHeading}
+                          onChange={handleText(tab.key, "customHeading")}
+                          style={{
+                            border: "1px solid #d1d5db", borderRadius: ".375rem",
+                            padding: ".4rem", fontSize: ".875rem", width: "100%"
+                          }}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                           <input
                             type="text"
-                            className="heading"
-                            value={tabState[tab.key].customHeading}
-                            onChange={handleText(tab.key, "customHeading")}
+                            placeholder="Subtitle 1"
+                            value={config.subtitle1}
+                            onChange={handleText(tab.key, "subtitle1")}
                             style={{
                               border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", marginTop: ".3rem", width: "13rem"
+                              padding: ".4rem", fontSize: ".875rem", width: "100%"
                             }}
                           />
-                          <select
-                            value={tabState[tab.key].ipAddress}
-                            onChange={(e) => handleText(tab.key, "ipAddress")({ target: { value: e.target.value } } as any)}
+                          <input
+                            type="text"
+                            placeholder="Subtitle 2"
+                            value={config.subtitle2}
+                            onChange={handleText(tab.key, "subtitle2")}
                             style={{
                               border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", marginTop: ".3rem", width: "13rem",
+                              padding: ".4rem", fontSize: ".875rem", width: "100%"
+                            }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="Subtitle 3"
+                            value={config.subtitle3}
+                            onChange={handleText(tab.key, "subtitle3")}
+                            style={{
+                              border: "1px solid #d1d5db", borderRadius: ".375rem",
+                              padding: ".4rem", fontSize: ".875rem", width: "100%"
+                            }}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                          {/* URL Dropdown 1 */}
+                          <select
+                            value={config.url1}
+                            onChange={handleSelect(tab.key, "url1")}
+                            style={{
+                              border: "1px solid #d1d5db", borderRadius: ".375rem",
+                              padding: ".4rem", fontSize: ".875rem", width: "100%",
                               backgroundColor: "white", cursor: "pointer",
                               minHeight: "2.5rem"
                             }}
                           >
-                            <option value="">Select a path...</option>
-                            <option value="/aboutus">/aboutus</option>
-                            <option value="/retrieval">/retrieval</option>
-                            <option value="/retrieval2">/retrieval2</option>
-                            <option value="/retrieval3">/retrieval3</option>
-                            <option value="/map">/map</option>
-                            <option value="/appeals">/appeals</option>
-                            <option value="/agents">/agents</option>
-                            <option value="/forms">/forms</option>
-                            <option value="/graphs">/graphs</option>
-                            <option value="/documents">/documents</option>
-                            <option value="/iframe">/iframe</option>
-                            <option value="/iframe2">/iframe2</option>
-                            <option value="/access/idoc">/access/idoc</option>
-                            <option value="/access/iask">/access/iask</option>
-                            <option value="/access/igraph">/access/igraph</option>
-                            <option value="/access/ilog">/access/ilog</option>
+                            {URL_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
                           </select>
-
-                          {showLoginField && (
-                            <input
-                              type="text"
-                              placeholder="URL"
-                              value={tabState[tab.key].loginUrl || ''}
-                              onChange={handleText(tab.key, "loginUrl")}
-                              required
-                              style={{
-                                border: "1px solid #d1d5db", borderRadius: ".375rem",
-                                padding: ".4rem", fontSize: ".875rem", marginTop: ".3rem", width: "14rem",
-                                backgroundColor: "#fff"
-                              }}
-                            />
-                          )}
+                          
+                          {/* URL Dropdown 2 */}
+                          <select
+                            value={config.url2}
+                            onChange={handleSelect(tab.key, "url2")}
+                            style={{
+                              border: "1px solid #d1d5db", borderRadius: ".375rem",
+                              padding: ".4rem", fontSize: ".875rem", width: "100%",
+                              backgroundColor: "white", cursor: "pointer",
+                              minHeight: "2.5rem"
+                            }}
+                          >
+                            {URL_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          {/* URL Dropdown 3 */}
+                          <select
+                            value={config.url3}
+                            onChange={handleSelect(tab.key, "url3")}
+                            style={{
+                              border: "1px solid #d1d5db", borderRadius: ".375rem",
+                              padding: ".4rem", fontSize: ".875rem", width: "100%",
+                              backgroundColor: "white", cursor: "pointer",
+                              minHeight: "2.5rem"
+                            }}
+                          >
+                            {URL_OPTIONS.map(option => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <input type="checkbox" checked={tabState[tab.key].public} onChange={handleCheck(tab.key, "public")} />
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          placeholder="IP Address"
+                          value={config.ipAddress}
+                          onChange={handleText(tab.key, "ipAddress")}
+                          style={{
+                            border: "1px solid #d1d5db", borderRadius: ".375rem",
+                            padding: ".4rem", fontSize: ".875rem", width: "100%"
+                          }}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <input type="checkbox" checked={tabState[tab.key].admin} onChange={handleCheck(tab.key, "admin")} />
+                        <input type="checkbox" checked={config.public} onChange={handleCheck(tab.key, "public")} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input type="checkbox" checked={config.admin} onChange={handleCheck(tab.key, "admin")} />
                       </td>
                     </tr>
                   );
