@@ -13,7 +13,9 @@ type TabAccess = {
   url1: string;
   url2: string;
   url3: string;
-  ipAddress: string;
+  ipAddress1: string;
+  ipAddress2: string;
+  ipAddress3: string;
   order: number;
 };
 
@@ -56,7 +58,9 @@ const initialState: Record<string, TabAccess> = Object.fromEntries(
       url1: "",
       url2: "",
       url3: "",
-      ipAddress: "",
+      ipAddress1: "",
+      ipAddress2: "",
+      ipAddress3: "",
       order: index,
     },
   ])
@@ -84,7 +88,9 @@ const AdminTabSettings: React.FC = () => {
               url1: savedData[tab.key]?.url1 || '',
               url2: savedData[tab.key]?.url2 || '',
               url3: savedData[tab.key]?.url3 || '',
-              ipAddress: savedData[tab.key]?.ipAddress || '',
+              ipAddress1: savedData[tab.key]?.ipAddress || '',
+              ipAddress2: savedData[tab.key]?.ipAddress || '',
+              ipAddress3: savedData[tab.key]?.ipAddress || '',
               order: savedData[tab.key]?.order !== undefined ? savedData[tab.key].order : index
             };
             return acc;
@@ -101,7 +107,7 @@ const AdminTabSettings: React.FC = () => {
   }, []);
 
   const handleCheck =
-    (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "url1" | "url2" | "url3" | "ipAddress">) =>
+    (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "url1" | "url2" | "url3" | "ipAddress1" | "ipAddress2" |"ipAddress3"   >) =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -110,7 +116,7 @@ const AdminTabSettings: React.FC = () => {
       };
 
   const handleText =
-    (tabKey: string, field: "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "ipAddress") =>
+    (tabKey: string, field: "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "ipAddress1" | "ipAddress2" | "ipAddress3") =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -276,16 +282,38 @@ const AdminTabSettings: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
+                         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                         <input
                           type="text"
                           placeholder="IP Address"
-                          value={config.ipAddress}
-                          onChange={handleText(tab.key, "ipAddress")}
+                          value={config.ipAddress1}
+                          onChange={handleText(tab.key, "ipAddress1")}
                           style={{
                             border: "1px solid #d1d5db", borderRadius: ".375rem",
                             padding: ".4rem", fontSize: ".875rem", width: "100%"
                           }}
                         />
+                        <input
+                          type="text"
+                          placeholder="IP Address"
+                          value={config.ipAddress2}
+                          onChange={handleText(tab.key, "ipAddress2")}
+                          style={{
+                            border: "1px solid #d1d5db", borderRadius: ".375rem",
+                            padding: ".4rem", fontSize: ".875rem", width: "100%"
+                          }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="IP Address"
+                          value={config.ipAddress3}
+                          onChange={handleText(tab.key, "ipAddress3")}
+                          style={{
+                            border: "1px solid #d1d5db", borderRadius: ".375rem",
+                            padding: ".4rem", fontSize: ".875rem", width: "100%"
+                          }}
+                        />
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <input type="checkbox" checked={config.public} onChange={handleCheck(tab.key, "public")} />

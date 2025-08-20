@@ -17,20 +17,43 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { firebaseLogout } from '@/api/firebaseAuth';
 import { useNavigationTabsStore } from '@/stores/navigationTabs';
-import LoginModal from '@/features/LoginModal'; // at top
+import LoginModal from '@/features/LoginModal';
 
 interface NavigationTab {
   label: string;
   value: string;
   path: string;
   loginUrl: string;
+  subtitles?: string[];
 }
 
+interface MainNavigationTab extends NavigationTab {
+  subtitles: string[];
+  isActive: boolean;
+  order: number;
+}
 
-function NavigationItem({ tab, isActive }: { tab: NavigationTab; isActive: boolean }) {
+interface FirebaseTabConfig {
+  [key: string]: {
+    public?: boolean;
+    stakeholders?: boolean;
+    team?: boolean;
+    admin?: boolean;
+    customHeading?: string;
+    ipAddress1?: string;
+    order?: number;
+    loginUrl?: string;
+    subtitle1?: string;
+    subtitle2?: string;
+    subtitle3?: string;
+  };
+}
+
+function NavigationItem({ tab, isActive, onClick }: { tab: NavigationTab; isActive: boolean; onClick?: () => void }) {
   return (
     <NavLink
       to={tab.path}
+      onClick={onClick}
       className={cn(
         'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
         isActive
@@ -43,9 +66,10 @@ function NavigationItem({ tab, isActive }: { tab: NavigationTab; isActive: boole
   );
 }
 
-function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string | null }) {
-  const [tabs, setTabs] = useState<NavigationTab[]>([]);
+function NavigationMenu({ guestMode, role, onTabClick }: { guestMode: boolean; role?: string | null; onTabClick?: (tab: MainNavigationTab) => void }) {
+  const [tabs, setTabs] = useState<MainNavigationTab[]>([]);
   const location = useLocation();
+  
   useEffect(() => {
     const fetchTabs = async () => {
       try {
@@ -53,26 +77,41 @@ function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const config = docSnap.data();
+          const config = docSnap.data() as FirebaseTabConfig;
 
           const entries = Object.entries(config)
-            .filter(([key, val]: any) => {
+            .filter(([key, val]) => {
               if (!val || typeof val !== 'object') return false;
-
-              // 👇 NEW: Exclude sub-tabs whose path starts with /access/
-              const ipPath = val.ipAddress || '';
-              // if (ipPath.startsWith('/access/')) return false;
-
+              
+              // Filter based on guest mode and permissions
               if (guestMode) return val.public;
               return val.public || val.stakeholders || val.team || val.admin;
             })
-            .map(([key, val]: any) => {
+            .map(([key, val]) => {
               const label = val.customHeading || key;
-              const path = val.ipAddress || `/${key}`;
+              const path = val.ipAddress1 || `/${key}`;
               const order = val.order ?? 999;
               const loginUrl = val.loginUrl || key;
+              
+              // Collect non-empty subtitles
+              const subtitles = [
+                val.subtitle1 || '',
+                val.subtitle2 || '',
+                val.subtitle3 || ''
+              ].filter(subtitle => subtitle.trim() !== '');
+              
+              // For tabs with subtitles, use the first IP address as the main path
+              const mainPath = subtitles.length > 0 ? val.ipAddress1 || `/${key}` : path;
 
-              return { label, value: key, path, order, loginUrl };
+              return { 
+                label, 
+                value: key, 
+                path: mainPath, 
+                order, 
+                loginUrl,
+                subtitles,
+                isActive: location.pathname === mainPath || location.pathname.startsWith(mainPath)
+              };
             })
             .sort((a, b) => a.order - b.order);
 
@@ -88,9 +127,8 @@ function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string
       }
     };
 
-
     fetchTabs();
-  }, [guestMode]);
+  }, [guestMode, location.pathname]);
 
   return (
     <div className="flex items-center gap-2">
@@ -98,10 +136,8 @@ function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string
         <NavigationItem
           key={tab.value}
           tab={tab}
-          isActive={
-            location.pathname === tab.path ||
-            (tab.path.includes('access') && location.pathname.startsWith(tab.path))
-          }
+          isActive={tab.isActive}
+          onClick={() => onTabClick && onTabClick(tab)}
         />
       ))}
 
@@ -122,119 +158,103 @@ function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string
   );
 }
 
-function AccessSubNavigation({ role }: { role?: string | null }) {
+function SubNavigationMenu({ activeTab }: { activeTab?: MainNavigationTab | null }) {
   const location = useLocation();
-  const [tabs, setTabs] = useState<NavigationTab[]>([]);
-  const isAccessPage = location.pathname.startsWith('/access');
+  
+  if (!activeTab || !activeTab.subtitles || activeTab.subtitles.length === 0) {
+    return null;
+  }
 
+  return (
+    <div className="flex justify-center items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
+      {activeTab.subtitles.map((subtitle, index) => {
+        // Create a path for each subtitle using the corresponding IP address
+        const path = activeTab.path.replace('/access/', `/access/${subtitle.toLowerCase()}/`);
+        
+        return (
+          <NavLink
+            key={index}
+            to={path}
+            className={cn(
+              'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+              location.pathname.startsWith(path)
+                ? 'bg-emerald-400 text-white'
+                : 'text-muted-foreground hover:bg-accent'
+            )}
+          >
+            {subtitle}
+          </NavLink>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function SiteHeader({ guestMode = false }: { guestMode?: boolean }) {
+  const { t } = useTranslation();
+  const { role, plan, username, webuiTitle, webuiDescription } = useAuthStore();
+  const [showLogin, setShowLogin] = useState(false);
+  const [activeTab, setActiveTab] = useState<MainNavigationTab | null>(null);
+  const location = useLocation();
+
+  // Find the active tab based on current location
   useEffect(() => {
-    const fetchAccessTabs = async () => {
+    const findActiveTab = async () => {
       try {
         const docRef = doc(db, 'admin_feature_tabs', 'access_config_local');
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          const config = docSnap.data();
-          // console.log('Access tabs config loaded:', config);
+          const config = docSnap.data() as FirebaseTabConfig;
+          const tabs = Object.entries(config)
+            .filter(([key, val]) => {
+              if (!val || typeof val !== 'object') return false;
+              if (guestMode) return val.public;
+              return val.public || val.stakeholders || val.team || val.admin;
+            })
+            .map(([key, val]) => {
+              const label = val.customHeading || key;
+              const path = val.ipAddress1 || `/${key}`;
+              const subtitles = [
+                val.subtitle1 || '',
+                val.subtitle2 || '',
+                val.subtitle3 || ''
+              ].filter(subtitle => subtitle.trim() !== '');
+              
+              const mainPath = subtitles.length > 0 ? val.ipAddress1 || `/${key}` : path;
+              
+              return {
+                label,
+                value: key,
+                path: mainPath,
+                subtitles,
+                isActive: location.pathname === mainPath || location.pathname.startsWith(mainPath),
+                order: val.order || 999,
+                loginUrl: val.loginUrl || key
+              };
+            });
 
-          console.log('config', config)
-          const updatedTabs = tabs.map(tab => {
-            let customHeading = config[tab.value]?.customHeading || config[tab.value]?.order;
-            // const customPath = config[tab.value]?.ipAddress || config[tab.value]?.order;
-            const customPath = config[tab.value]?.ipAddress || tab.path;
-
-            // Map admin settings to secondary header tabs
-            if (tab.value === 'idoc') {
-              // iDoc should use Documents custom heading
-              customHeading = config['documents']?.customHeading || customHeading;
-            } else if (tab.value === 'igraph') {
-              // iGraph should use Graphs custom heading
-              customHeading = config['graphs']?.customHeading || customHeading;
-            } else if (tab.value === 'iask') {
-              // iAsk should use AskAtul custom heading
-              customHeading = config['askatul']?.customHeading || customHeading;
-            } else if (tab.value === 'ilog') {
-              // iLog should use Logs custom heading
-              customHeading = config['logs']?.customHeading || customHeading;
-            }
-
-            const finalPath = customPath.startsWith('/') ? customPath : `/${customPath}`;
-
-            let finalLabel = customHeading;
-            if (!finalLabel && customPath !== tab.path) {
-              finalLabel = tabs[customPath] || tab.label;
-            }
-            if (!finalLabel) {
-              finalLabel = tab.label;
-            }
-            // console.log("tab.value", tab.value, "config[tab.value]", config[tab.value]);
-
-            const configEntry = Object.values(config).find(
-              (entry) => entry.ipAddress === tab.path
-            );
-            // console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
-            return {
-              ...tab,
-              label: finalLabel,
-              path: finalPath,
-              loginUrl: configEntry?.loginUrl || ''
-            };
-          });
-          console.log('updatedTabs', updatedTabs)
-          setTabs(updatedTabs);
-          useNavigationTabsStore.getState().setAccessTabs(updatedTabs);
-        } else {
-          console.log('No Firebase config found for access tabs, using defaults');
-          setTabs(tabs);
+          const currentTab = tabs.find(tab => 
+            location.pathname === tab.path || location.pathname.startsWith(tab.path)
+          );
+          
+          setActiveTab(currentTab || null);
         }
-      } catch (error) {
-        console.error('Error fetching access tabs config:', error);
-        setTabs(tabs);
+      } catch (err) {
+        console.error('Error finding active tab:', err);
       }
     };
 
-    if (isAccessPage) {
-      fetchAccessTabs();
-    }
-  }, [isAccessPage]);
+    findActiveTab();
+  }, [location.pathname, guestMode]);
 
-  if (!isAccessPage) return null;
+  const handleTabClick = (tab: MainNavigationTab) => {
+    setActiveTab(tab);
+  };
 
-  return (
-    <div className="flex justify-center items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
-      {tabs.map(tab => (
-        <NavigationItem
-          key={tab.value}
-          tab={tab}
-          isActive={location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)}
-        />
-      ))}
-      {role === 'admin' && (
-        <NavLink
-          to="/access/admin-features"
-          className={cn(
-            'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-            location.pathname.startsWith('/access/admin-features')
-              ? 'bg-emerald-400 text-white'
-              : 'text-muted-foreground hover:bg-accent'
-          )}
-        >
-          Admin
-        </NavLink>
-      )}
-    </div>
-  );
-}
-
-
-export default function SiteHeader({ guestMode = false }: { guestMode?: boolean }) {
-  const { t } = useTranslation();
-  const { role, plan, username, webuiTitle, webuiDescription } = useAuthStore();
-
-const [showLogin, setShowLogin] = useState(false);
   return (
     <>
-      <header className="border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex  w-full items-center justify-between p-4">
+      <header className="border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex w-full items-center justify-between p-4">
         {/* Left side - Logo + Branding */}
         <div className="flex items-center min-w-[200px]">
           <NavLink to={guestMode ? "/" : "/access"} className="flex items-center gap-2">
@@ -262,12 +282,11 @@ const [showLogin, setShowLogin] = useState(false);
 
         {/* Center - Navigation Tabs */}
         <div className="flex flex-1 justify-center items-center">
-          <NavigationMenu guestMode={guestMode} role={role} />
-          {/* {guestMode && (
-            <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-md">
-              {t('login.guestMode', 'Guest Mode')}
-            </span>
-          )} */}
+          <NavigationMenu 
+            guestMode={guestMode} 
+            role={role} 
+            onTabClick={handleTabClick}
+          />
         </div>
 
         {/* Right - Actions */}
@@ -291,20 +310,20 @@ const [showLogin, setShowLogin] = useState(false);
             </button>
           ) : (
             <>
-             <button
-      onClick={() => setShowLogin(true)}
-      className="text-sm hover:underline"
-    >
-      Login
-    </button>
-    <LoginModal open={showLogin} onOpenChange={setShowLogin} />
-            {/* <Link to="/login" className="text-sm hover:underline">Login</Link> */}
+              <button
+                onClick={() => setShowLogin(true)}
+                className="text-sm hover:underline"
+              >
+                Login
+              </button>
+              <LoginModal open={showLogin} onOpenChange={setShowLogin} />
             </>
           )}
         </div>
       </header>
 
-      <AccessSubNavigation role={role} />
+      {/* Sub Navigation for tabs with subtitles */}
+      <SubNavigationMenu activeTab={activeTab} />
     </>
   );
 }
