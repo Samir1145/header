@@ -69,7 +69,7 @@ const AdminTabSettings: React.FC = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config');
+        const docRef = doc(db, 'admin_feature_tabs', 'access_config_local');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const savedData = docSnap.data();
@@ -130,7 +130,7 @@ const AdminTabSettings: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await setDoc(doc(db, 'admin_feature_tabs', 'access_config'), tabState);
+      await setDoc(doc(db, 'admin_feature_tabs', 'access_config_local'), tabState);
       toast.success('Access settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);

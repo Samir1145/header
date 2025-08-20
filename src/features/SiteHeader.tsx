@@ -49,7 +49,7 @@ function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string
   useEffect(() => {
     const fetchTabs = async () => {
       try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config');
+        const docRef = doc(db, 'admin_feature_tabs', 'access_config_local');
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
@@ -122,109 +122,110 @@ function NavigationMenu({ guestMode, role }: { guestMode: boolean, role?: string
   );
 }
 
-// function AccessSubNavigation({ role }: { role?: string | null }) {
-//   const location = useLocation();
-//   const [tabs, setTabs] = useState<NavigationTab[]>([]);
-//   const isAccessPage = location.pathname.startsWith('/access');
+function AccessSubNavigation({ role }: { role?: string | null }) {
+  const location = useLocation();
+  const [tabs, setTabs] = useState<NavigationTab[]>([]);
+  const isAccessPage = location.pathname.startsWith('/access');
 
-//   useEffect(() => {
-//     const fetchAccessTabs = async () => {
-//       try {
-//         const docRef = doc(db, 'admin_feature_tabs', 'access_config');
-//         const docSnap = await getDoc(docRef);
+  useEffect(() => {
+    const fetchAccessTabs = async () => {
+      try {
+        const docRef = doc(db, 'admin_feature_tabs', 'access_config_local');
+        const docSnap = await getDoc(docRef);
 
-//         if (docSnap.exists()) {
-//           const config = docSnap.data();
-//           // console.log('Access tabs config loaded:', config);
+        if (docSnap.exists()) {
+          const config = docSnap.data();
+          // console.log('Access tabs config loaded:', config);
 
-//           console.log('config', config)
-//           const updatedTabs = accessExtraTabs.map(tab => {
-//             let customHeading = config[tab.value]?.customHeading || config[tab.value]?.order;
-//             // const customPath = config[tab.value]?.ipAddress || config[tab.value]?.order;
-//             const customPath = config[tab.value]?.ipAddress || tab.path;
+          console.log('config', config)
+          const updatedTabs = tabs.map(tab => {
+            let customHeading = config[tab.value]?.customHeading || config[tab.value]?.order;
+            // const customPath = config[tab.value]?.ipAddress || config[tab.value]?.order;
+            const customPath = config[tab.value]?.ipAddress || tab.path;
 
-//             // Map admin settings to secondary header tabs
-//             if (tab.value === 'idoc') {
-//               // iDoc should use Documents custom heading
-//               customHeading = config['documents']?.customHeading || customHeading;
-//             } else if (tab.value === 'igraph') {
-//               // iGraph should use Graphs custom heading
-//               customHeading = config['graphs']?.customHeading || customHeading;
-//             } else if (tab.value === 'iask') {
-//               // iAsk should use AskAtul custom heading
-//               customHeading = config['askatul']?.customHeading || customHeading;
-//             } else if (tab.value === 'ilog') {
-//               // iLog should use Logs custom heading
-//               customHeading = config['logs']?.customHeading || customHeading;
-//             }
+            // Map admin settings to secondary header tabs
+            if (tab.value === 'idoc') {
+              // iDoc should use Documents custom heading
+              customHeading = config['documents']?.customHeading || customHeading;
+            } else if (tab.value === 'igraph') {
+              // iGraph should use Graphs custom heading
+              customHeading = config['graphs']?.customHeading || customHeading;
+            } else if (tab.value === 'iask') {
+              // iAsk should use AskAtul custom heading
+              customHeading = config['askatul']?.customHeading || customHeading;
+            } else if (tab.value === 'ilog') {
+              // iLog should use Logs custom heading
+              customHeading = config['logs']?.customHeading || customHeading;
+            }
 
-//             const finalPath = customPath.startsWith('/') ? customPath : `/${customPath}`;
+            const finalPath = customPath.startsWith('/') ? customPath : `/${customPath}`;
 
-//             let finalLabel = customHeading;
-//             if (!finalLabel && customPath !== tab.path) {
-//               finalLabel = pathToLabelMap[customPath] || tab.label;
-//             }
-//             if (!finalLabel) {
-//               finalLabel = tab.label;
-//             }
-//             // console.log("tab.value", tab.value, "config[tab.value]", config[tab.value]);
+            let finalLabel = customHeading;
+            if (!finalLabel && customPath !== tab.path) {
+              finalLabel = tabs[customPath] || tab.label;
+            }
+            if (!finalLabel) {
+              finalLabel = tab.label;
+            }
+            // console.log("tab.value", tab.value, "config[tab.value]", config[tab.value]);
 
-//             const configEntry = Object.values(config).find(
-//               (entry) => entry.ipAddress === tab.path
-//             );
-//             // console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
-//             return {
-//               ...tab,
-//               label: finalLabel,
-//               path: finalPath,
-//               loginUrl: configEntry?.loginUrl || ''
-//             };
-//           });
-//           console.log('updatedTabs', updatedTabs)
-//           setTabs(updatedTabs);
-//           useNavigationTabsStore.getState().setAccessTabs(updatedTabs);
-//         } else {
-//           console.log('No Firebase config found for access tabs, using defaults');
-//           setTabs(accessExtraTabs);
-//         }
-//       } catch (error) {
-//         console.error('Error fetching access tabs config:', error);
-//         setTabs(accessExtraTabs);
-//       }
-//     };
+            const configEntry = Object.values(config).find(
+              (entry) => entry.ipAddress === tab.path
+            );
+            // console.log(`Access Tab ${tab.value}: Final label will be "${finalLabel}" (custom: "${customHeading}", path: "${customPath}", original: "${tab.label}")`);
+            return {
+              ...tab,
+              label: finalLabel,
+              path: finalPath,
+              loginUrl: configEntry?.loginUrl || ''
+            };
+          });
+          console.log('updatedTabs', updatedTabs)
+          setTabs(updatedTabs);
+          useNavigationTabsStore.getState().setAccessTabs(updatedTabs);
+        } else {
+          console.log('No Firebase config found for access tabs, using defaults');
+          setTabs(tabs);
+        }
+      } catch (error) {
+        console.error('Error fetching access tabs config:', error);
+        setTabs(tabs);
+      }
+    };
 
-//     if (isAccessPage) {
-//       fetchAccessTabs();
-//     }
-//   }, [isAccessPage]);
+    if (isAccessPage) {
+      fetchAccessTabs();
+    }
+  }, [isAccessPage]);
 
-//   if (!isAccessPage) return null;
+  if (!isAccessPage) return null;
 
-//   return (
-//     <div className="flex justify-end items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
-//       {tabs.map(tab => (
-//         <NavigationItem
-//           key={tab.value}
-//           tab={tab}
-//           isActive={location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)}
-//         />
-//       ))}
-//       {role === 'admin' && (
-//         <NavLink
-//           to="/access/admin-features"
-//           className={cn(
-//             'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-//             location.pathname.startsWith('/access/admin-features')
-//               ? 'bg-emerald-400 text-white'
-//               : 'text-muted-foreground hover:bg-accent'
-//           )}
-//         >
-//           Admin
-//         </NavLink>
-//       )}
-//     </div>
-//   );
-// }
+  return (
+    <div className="flex justify-center items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
+      {tabs.map(tab => (
+        <NavigationItem
+          key={tab.value}
+          tab={tab}
+          isActive={location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`)}
+        />
+      ))}
+      {role === 'admin' && (
+        <NavLink
+          to="/access/admin-features"
+          className={cn(
+            'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+            location.pathname.startsWith('/access/admin-features')
+              ? 'bg-emerald-400 text-white'
+              : 'text-muted-foreground hover:bg-accent'
+          )}
+        >
+          Admin
+        </NavLink>
+      )}
+    </div>
+  );
+}
+
 
 export default function SiteHeader({ guestMode = false }: { guestMode?: boolean }) {
   const { t } = useTranslation();
@@ -302,8 +303,8 @@ const [showLogin, setShowLogin] = useState(false);
           )}
         </div>
       </header>
-{/* 
-      <AccessSubNavigation role={role} /> */}
+
+      <AccessSubNavigation role={role} />
     </>
   );
 }
