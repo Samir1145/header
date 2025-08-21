@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { SiteInfo } from '@/lib/constants';
 import AppSettings from '@/components/AppSettings';
 import { useAuthStore } from '@/stores/state';
@@ -24,14 +24,8 @@ interface NavigationTab {
   value: string;
   path: string;
   loginUrl: string;
-  subtitles?: string[];
-  subtitleUrls?: string[];
-}
-
-interface MainNavigationTab extends NavigationTab {
   subtitles: string[];
   subtitleUrls: string[];
-  isActive: boolean;
   order: number;
 }
 
@@ -54,114 +48,50 @@ interface FirebaseTabConfig {
   };
 }
 
-function NavigationItem({ tab, isActive, onClick }: { tab: NavigationTab; isActive: boolean; onClick?: () => void }) {
-  return (
-    <NavLink
-      to={tab.path}
-      onClick={onClick}
-      className={cn(
-        'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-        isActive
-          ? 'bg-emerald-400 text-white'
-          : 'text-muted-foreground hover:bg-accent'
-      )}
-    >
-      {tab.label}
-    </NavLink>
-  );
-}
-
-function NavigationMenu({ guestMode, role, onTabClick }: { guestMode: boolean; role?: string | null; onTabClick?: (tab: MainNavigationTab) => void }) {
-  const [tabs, setTabs] = useState<MainNavigationTab[]>([]);
+function NavigationMenu({ tabs, role }: { tabs: NavigationTab[]; role?: string | null }) {
+  const navigate = useNavigate();
   const location = useLocation();
-  
-  useEffect(() => {
-    const fetchTabs = async () => {
-      try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config_local');
-        const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          const config = docSnap.data() as FirebaseTabConfig;
+  const handleTabNavigation = (tab: NavigationTab) => {
+    if (tab.subtitles.length > 0 && tab.subtitleUrls.length > 0) {
+      navigate(tab.subtitleUrls[0]);
+    } else {
+      navigate(tab.path);
+    }
+  };
 
-          const entries = Object.entries(config)
-            .filter(([key, val]) => {
-              if (!val || typeof val !== 'object') return false;
-              
-              // Filter based on guest mode and permissions
-              if (guestMode) return val.public;
-              return val.public || val.stakeholders || val.team || val.admin;
-            })
-            .map(([key, val]) => {
-              const label = val.customHeading || key;
-              
-              // Fix: Ensure path starts with a slash and doesn't have double slashes
-              let path = val.ipAddress1 || `/${key}`;
-              if (!path.startsWith('/')) path = `/${path}`;
-              path = path.replace(/\/+/g, '/'); // Remove duplicate slashes
-              
-              const order = val.order ?? 999;
-              const loginUrl = val.loginUrl || key;
-              
-              // Collect non-empty subtitles
-              const subtitles = [
-                val.subtitle1 || '',
-                val.subtitle2 || '',
-                val.subtitle3 || ''
-              ].filter(subtitle => subtitle.trim() !== '');
-              
-              // Collect non-empty subtitle URLs
-              const subtitleUrls = [
-                val.url1 || '',
-                val.url2 || '',
-                val.url3 || ''
-              ].filter(url => url.trim() !== '');
-              
-              // For tabs with subtitles, use the first IP address as the main path
-              const mainPath = path;
-
-              // Check if this tab is active
-              const isActive = location.pathname === mainPath || 
-                location.pathname.startsWith(mainPath + '/') ||
-                subtitleUrls.some(url => location.pathname === url || location.pathname.startsWith(url + '/'));
-
-              return { 
-                label, 
-                value: key, 
-                path: mainPath, 
-                order, 
-                loginUrl,
-                subtitles,
-                subtitleUrls,
-                isActive
-              };
-            })
-            .sort((a, b) => a.order - b.order);
-
-          setTabs(entries);
-          useNavigationTabsStore.getState().setTabs(entries);
-        } else {
-          console.warn('No config found in Firebase');
-          setTabs([]);
-        }
-      } catch (err) {
-        console.error('Error loading tabs:', err);
-        setTabs([]);
-      }
-    };
-
-    fetchTabs();
-  }, [guestMode, location.pathname]);
+  // Improved active tab detection
+  const isTabActive = (tab: NavigationTab) => {
+    // Exact match for main tab path
+    if (location.pathname === tab.path) return true;
+    
+    // Check if any subtitle URL matches exactly
+    if (tab.subtitleUrls.some(url => location.pathname === url)) return true;
+    
+    // Check if current path starts with a subtitle URL (for nested routes)
+    if (tab.subtitleUrls.some(url => 
+      location.pathname.startsWith(url + '/') && 
+      location.pathname !== url // Ensure it's not an exact match
+    )) return true;
+    
+    return false;
+  };
 
   return (
     <div className="flex items-center gap-2">
       {tabs.map(tab => (
-        <NavigationItem
+        <div
           key={tab.value}
-          tab={tab}
-          isActive={tab.isActive}
-          onClick={() => onTabClick && onTabClick(tab)}
-        />
+          onClick={() => handleTabNavigation(tab)}
+          className={cn(
+            'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+            isTabActive(tab)
+              ? 'bg-emerald-400 text-white'
+              : 'text-muted-foreground hover:bg-accent'
+          )}
+        >
+          {tab.label}
+        </div>
       ))}
 
       {role === 'admin' && (
@@ -181,7 +111,7 @@ function NavigationMenu({ guestMode, role, onTabClick }: { guestMode: boolean; r
   );
 }
 
-function SubNavigationMenu({ activeTab }: { activeTab?: MainNavigationTab | null }) {
+function SubNavigationMenu({ activeTab }: { activeTab?: NavigationTab | null }) {
   const location = useLocation();
   
   if (!activeTab || !activeTab.subtitles || activeTab.subtitles.length === 0) {
@@ -191,19 +121,19 @@ function SubNavigationMenu({ activeTab }: { activeTab?: MainNavigationTab | null
   return (
     <div className="flex justify-center items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
       {activeTab.subtitles.map((subtitle, index) => {
-        // Use the URL from the config if available, otherwise create a path
         let path = activeTab.subtitleUrls[index] || '';
         
-        // If no URL is configured, create a default path
         if (!path) {
-          const basePath = activeTab.path.replace(/\/+$/, ''); // Remove trailing slashes
+          const basePath = activeTab.path.replace(/\/+$/, '');
           const subtitleSlug = subtitle.toLowerCase().replace(/\s+/g, '-');
           path = `${basePath}/${subtitleSlug}`;
         }
         
-        // Ensure path starts with a slash
         if (!path.startsWith('/')) path = `/${path}`;
-        path = path.replace(/\/+/g, '/'); // Remove duplicate slashes
+        path = path.replace(/\/+/g, '/');
+        
+        const isActive = location.pathname === path || 
+          (location.pathname.startsWith(path + '/') && location.pathname !== path);
         
         return (
           <NavLink
@@ -211,7 +141,7 @@ function SubNavigationMenu({ activeTab }: { activeTab?: MainNavigationTab | null
             to={path}
             className={cn(
               'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-              location.pathname === path || location.pathname.startsWith(path + '/')
+              isActive
                 ? 'bg-emerald-400 text-white'
                 : 'text-muted-foreground hover:bg-accent'
             )}
@@ -228,80 +158,111 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
   const { t } = useTranslation();
   const { role, plan, username, webuiTitle, webuiDescription } = useAuthStore();
   const [showLogin, setShowLogin] = useState(false);
-  const [activeTab, setActiveTab] = useState<MainNavigationTab | null>(null);
+  const [tabs, setTabs] = useState<NavigationTab[]>([]);
+  const [activeTab, setActiveTab] = useState<NavigationTab | null>(null);
   const location = useLocation();
 
-  // Find the active tab based on current location
+  // Fetch tabs from Firestore
   useEffect(() => {
-    const findActiveTab = async () => {
+    const fetchTabs = async () => {
       try {
         const docRef = doc(db, 'admin_feature_tabs', 'access_config_local');
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           const config = docSnap.data() as FirebaseTabConfig;
-          const tabs = Object.entries(config)
-            .filter(([key, val]) => {
-              if (!val || typeof val !== 'object') return false;
-              if (guestMode) return val.public;
-              return val.public || val.stakeholders || val.team || val.admin;
-            })
-            .map(([key, val]) => {
-              const label = val.customHeading || key;
-              
-              // Fix: Ensure path starts with a slash and doesn't have double slashes
-              let path = val.ipAddress1 || `/${key}`;
-              if (!path.startsWith('/')) path = `/${path}`;
-              path = path.replace(/\/+/g, '/'); // Remove duplicate slashes
-              
-              const subtitles = [
-                val.subtitle1 || '',
-                val.subtitle2 || '',
-                val.subtitle3 || ''
-              ].filter(subtitle => subtitle.trim() !== '');
-              
-              // Collect non-empty subtitle URLs
-              const subtitleUrls = [
-                val.url1 || '',
-                val.url2 || '',
-                val.url3 || ''
-              ].filter(url => url.trim() !== '');
-              
-              const mainPath = path;
+          const fetchedTabs: NavigationTab[] = [];
 
-              // Check if this tab is active
-              const isActive = location.pathname === mainPath || 
-                location.pathname.startsWith(mainPath + '/') ||
-                subtitleUrls.some(url => location.pathname === url || location.pathname.startsWith(url + '/'));
-
-              return {
-                label,
-                value: key,
-                path: mainPath,
-                subtitles,
-                subtitleUrls,
-                isActive,
-                order: val.order || 999,
-                loginUrl: val.loginUrl || key
-              };
+          for (const [key, val] of Object.entries(config)) {
+            if (!val || typeof val !== 'object') continue;
+            
+            // Filter based on guest mode and permissions
+            if (guestMode && !val.public) continue;
+            if (!guestMode && !(val.public || val.stakeholders || val.team || val.admin)) continue;
+            
+            const label = val.customHeading || key;
+            
+            // Fix path formatting
+            let path = val.ipAddress1 || `/${key}`;
+            if (!path.startsWith('/')) path = `/${path}`;
+            path = path.replace(/\/+/g, '/');
+            
+            // Collect non-empty subtitles and URLs
+            const subtitles = [
+              val.subtitle1 || '',
+              val.subtitle2 || '',
+              val.subtitle3 || ''
+            ].filter(subtitle => subtitle.trim() !== '');
+            
+            const subtitleUrls = [
+              val.url1 || '',
+              val.url2 || '',
+              val.url3 || ''
+            ].filter(url => url.trim() !== '');
+            
+            fetchedTabs.push({
+              label,
+              value: key,
+              path,
+              order: val.order ?? 999,
+              loginUrl: val.loginUrl || key,
+              subtitles,
+              subtitleUrls
             });
+          }
 
-          // Find the active tab by checking which path matches
-          const currentTab = tabs.find(tab => tab.isActive);
-          
-          setActiveTab(currentTab || null);
+          // Sort tabs by order
+          fetchedTabs.sort((a, b) => a.order - b.order);
+          setTabs(fetchedTabs);
+          useNavigationTabsStore.getState().setTabs(fetchedTabs);
+        } else {
+          console.warn('No config found in Firebase');
+          setTabs([]);
         }
       } catch (err) {
-        console.error('Error finding active tab:', err);
+        console.error('Error loading tabs:', err);
+        setTabs([]);
       }
     };
 
-    findActiveTab();
-  }, [location.pathname, guestMode]);
+    fetchTabs();
+  }, [guestMode]);
 
-  const handleTabClick = (tab: MainNavigationTab) => {
-    setActiveTab(tab);
-  };
+  // Update active tab when location or tabs change
+  useEffect(() => {
+    if (tabs.length === 0) return;
+    
+    // Improved active tab detection with exact matching
+    const findActiveTab = () => {
+      // First, try to find exact matches for main tab paths
+      const exactMatch = tabs.find(tab => location.pathname === tab.path);
+      if (exactMatch) return exactMatch;
+      
+      // Then try to find matches for subtitle URLs
+      for (const tab of tabs) {
+        // Check if any subtitle URL matches exactly
+        if (tab.subtitleUrls.some(url => location.pathname === url)) {
+          return tab;
+        }
+        
+        // Check if current path starts with a subtitle URL (for nested routes)
+        if (tab.subtitleUrls.some(url => 
+          location.pathname.startsWith(url + '/') && 
+          location.pathname !== url // Ensure it's not an exact match
+        )) {
+          return tab;
+        }
+      }
+      
+      // Finally, check if path starts with a tab path (as fallback)
+      return tabs.find(tab => 
+        location.pathname.startsWith(tab.path + '/') && 
+        location.pathname !== tab.path
+      ) || null;
+    };
+    
+    setActiveTab(findActiveTab());
+  }, [location.pathname, tabs]);
 
   return (
     <>
@@ -333,11 +294,7 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
 
         {/* Center - Navigation Tabs */}
         <div className="flex flex-1 justify-center items-center">
-          <NavigationMenu 
-            guestMode={guestMode} 
-            role={role} 
-            onTabClick={handleTabClick}
-          />
+          <NavigationMenu tabs={tabs} role={role} />
         </div>
 
         {/* Right - Actions */}

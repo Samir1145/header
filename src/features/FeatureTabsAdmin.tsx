@@ -33,7 +33,6 @@ const URL_OPTIONS = [
   { value: "/retrieval3", label: "/retrieval3" },
   { value: "/retrieval4", label: "/retrieval4" },
   { value: "/retrieval5", label: "/retrieval5" },
-
   { value: "/map", label: "/map" },
   { value: "/appeals", label: "/appeals" },
   { value: "/agents", label: "/agents" },
@@ -42,7 +41,7 @@ const URL_OPTIONS = [
   { value: "/documents", label: "/documents" },
   { value: "/iframe", label: "/iframe" },
   { value: "/iframe2", label: "/iframe2" },
-    { value: "/iframe3", label: "/iframe3" },
+  { value: "/iframe3", label: "/iframe3" },
   { value: "/iframe4", label: "/iframe4" },
   { value: "/iframe5", label: "/iframe5" },
   { value: "/iframe6", label: "/iframe6" },
@@ -89,20 +88,21 @@ const AdminTabSettings: React.FC = () => {
         if (docSnap.exists()) {
           const savedData = docSnap.data();
           const mergedState: Record<string, TabAccess> = TABS.reduce((acc, tab, index) => {
+            const savedTab = savedData[tab.key] || {};
             acc[tab.key] = {
-              public: savedData[tab.key]?.public || false,
-              admin: savedData[tab.key]?.admin || false,
-              customHeading: savedData[tab.key]?.customHeading || '',
-              subtitle1: savedData[tab.key]?.subtitle1 || '',
-              subtitle2: savedData[tab.key]?.subtitle2 || '',
-              subtitle3: savedData[tab.key]?.subtitle3 || '',
-              url1: savedData[tab.key]?.url1 || '',
-              url2: savedData[tab.key]?.url2 || '',
-              url3: savedData[tab.key]?.url3 || '',
-              ipAddress1: savedData[tab.key]?.ipAddress || '',
-              ipAddress2: savedData[tab.key]?.ipAddress || '',
-              ipAddress3: savedData[tab.key]?.ipAddress || '',
-              order: savedData[tab.key]?.order !== undefined ? savedData[tab.key].order : index
+              public: savedTab.public || false,
+              admin: savedTab.admin || false,
+              customHeading: savedTab.customHeading || '',
+              subtitle1: savedTab.subtitle1 || '',
+              subtitle2: savedTab.subtitle2 || '',
+              subtitle3: savedTab.subtitle3 || '',
+              url1: savedTab.url1 || '',
+              url2: savedTab.url2 || '',
+              url3: savedTab.url3 || '',
+              ipAddress1: savedTab.ipAddress1 || '',
+              ipAddress2: savedTab.ipAddress2 || '',
+              ipAddress3: savedTab.ipAddress3 || '',
+              order: savedTab.order !== undefined ? savedTab.order : index
             };
             return acc;
           }, {} as Record<string, TabAccess>);
