@@ -1,4 +1,4 @@
-import { NavLink, useLocation, Link } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { SiteInfo } from '@/lib/constants';
 import AppSettings from '@/components/AppSettings';
 import { useAuthStore } from '@/stores/state';
@@ -25,10 +25,12 @@ interface NavigationTab {
   path: string;
   loginUrl: string;
   subtitles?: string[];
+  subtitleUrls?: string[];
 }
 
 interface MainNavigationTab extends NavigationTab {
   subtitles: string[];
+  subtitleUrls: string[];
   isActive: boolean;
   order: number;
 }
@@ -46,6 +48,9 @@ interface FirebaseTabConfig {
     subtitle1?: string;
     subtitle2?: string;
     subtitle3?: string;
+    url1?: string;
+    url2?: string;
+    url3?: string;
   };
 }
 
@@ -89,7 +94,12 @@ function NavigationMenu({ guestMode, role, onTabClick }: { guestMode: boolean; r
             })
             .map(([key, val]) => {
               const label = val.customHeading || key;
-              const path = val.ipAddress1 || `/${key}`;
+              
+              // Fix: Ensure path starts with a slash and doesn't have double slashes
+              let path = val.ipAddress1 || `/${key}`;
+              if (!path.startsWith('/')) path = `/${path}`;
+              path = path.replace(/\/+/g, '/'); // Remove duplicate slashes
+              
               const order = val.order ?? 999;
               const loginUrl = val.loginUrl || key;
               
@@ -100,8 +110,20 @@ function NavigationMenu({ guestMode, role, onTabClick }: { guestMode: boolean; r
                 val.subtitle3 || ''
               ].filter(subtitle => subtitle.trim() !== '');
               
+              // Collect non-empty subtitle URLs
+              const subtitleUrls = [
+                val.url1 || '',
+                val.url2 || '',
+                val.url3 || ''
+              ].filter(url => url.trim() !== '');
+              
               // For tabs with subtitles, use the first IP address as the main path
-              const mainPath = subtitles.length > 0 ? val.ipAddress1 || `/${key}` : path;
+              const mainPath = path;
+
+              // Check if this tab is active
+              const isActive = location.pathname === mainPath || 
+                location.pathname.startsWith(mainPath + '/') ||
+                subtitleUrls.some(url => location.pathname === url || location.pathname.startsWith(url + '/'));
 
               return { 
                 label, 
@@ -110,7 +132,8 @@ function NavigationMenu({ guestMode, role, onTabClick }: { guestMode: boolean; r
                 order, 
                 loginUrl,
                 subtitles,
-                isActive: location.pathname === mainPath || location.pathname.startsWith(mainPath)
+                subtitleUrls,
+                isActive
               };
             })
             .sort((a, b) => a.order - b.order);
@@ -168,8 +191,19 @@ function SubNavigationMenu({ activeTab }: { activeTab?: MainNavigationTab | null
   return (
     <div className="flex justify-center items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
       {activeTab.subtitles.map((subtitle, index) => {
-        // Create a path for each subtitle using the corresponding IP address
-        const path = activeTab.path.replace('/access/', `/access/${subtitle.toLowerCase()}/`);
+        // Use the URL from the config if available, otherwise create a path
+        let path = activeTab.subtitleUrls[index] || '';
+        
+        // If no URL is configured, create a default path
+        if (!path) {
+          const basePath = activeTab.path.replace(/\/+$/, ''); // Remove trailing slashes
+          const subtitleSlug = subtitle.toLowerCase().replace(/\s+/g, '-');
+          path = `${basePath}/${subtitleSlug}`;
+        }
+        
+        // Ensure path starts with a slash
+        if (!path.startsWith('/')) path = `/${path}`;
+        path = path.replace(/\/+/g, '/'); // Remove duplicate slashes
         
         return (
           <NavLink
@@ -177,7 +211,7 @@ function SubNavigationMenu({ activeTab }: { activeTab?: MainNavigationTab | null
             to={path}
             className={cn(
               'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-              location.pathname.startsWith(path)
+              location.pathname === path || location.pathname.startsWith(path + '/')
                 ? 'bg-emerald-400 text-white'
                 : 'text-muted-foreground hover:bg-accent'
             )}
@@ -214,29 +248,46 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
             })
             .map(([key, val]) => {
               const label = val.customHeading || key;
-              const path = val.ipAddress1 || `/${key}`;
+              
+              // Fix: Ensure path starts with a slash and doesn't have double slashes
+              let path = val.ipAddress1 || `/${key}`;
+              if (!path.startsWith('/')) path = `/${path}`;
+              path = path.replace(/\/+/g, '/'); // Remove duplicate slashes
+              
               const subtitles = [
                 val.subtitle1 || '',
                 val.subtitle2 || '',
                 val.subtitle3 || ''
               ].filter(subtitle => subtitle.trim() !== '');
               
-              const mainPath = subtitles.length > 0 ? val.ipAddress1 || `/${key}` : path;
+              // Collect non-empty subtitle URLs
+              const subtitleUrls = [
+                val.url1 || '',
+                val.url2 || '',
+                val.url3 || ''
+              ].filter(url => url.trim() !== '');
               
+              const mainPath = path;
+
+              // Check if this tab is active
+              const isActive = location.pathname === mainPath || 
+                location.pathname.startsWith(mainPath + '/') ||
+                subtitleUrls.some(url => location.pathname === url || location.pathname.startsWith(url + '/'));
+
               return {
                 label,
                 value: key,
                 path: mainPath,
                 subtitles,
-                isActive: location.pathname === mainPath || location.pathname.startsWith(mainPath),
+                subtitleUrls,
+                isActive,
                 order: val.order || 999,
                 loginUrl: val.loginUrl || key
               };
             });
 
-          const currentTab = tabs.find(tab => 
-            location.pathname === tab.path || location.pathname.startsWith(tab.path)
-          );
+          // Find the active tab by checking which path matches
+          const currentTab = tabs.find(tab => tab.isActive);
           
           setActiveTab(currentTab || null);
         }
