@@ -10,12 +10,18 @@ type TabAccess = {
   subtitle1: string;
   subtitle2: string;
   subtitle3: string;
+  subtitle4: string;
+  subtitle5: string;
   url1: string;
   url2: string;
   url3: string;
+  url4: string;
+  url5: string;
   ipAddress1: string;
   ipAddress2: string;
   ipAddress3: string;
+  ipAddress4: string;
+  ipAddress5: string;
   order: number;
 };
 
@@ -34,11 +40,15 @@ const URL_OPTIONS = [
   { value: "/retrieval4", label: "/retrieval4" },
   { value: "/retrieval5", label: "/retrieval5" },
   { value: "/map", label: "/map" },
+  { value: "/map1", label: "/map1" },
+  { value: "/map2", label: "/map2" },
   { value: "/appeals", label: "/appeals" },
   { value: "/agents", label: "/agents" },
   { value: "/forms", label: "/forms" },
+  { value: "/forms1", label: "/forms1" },
+  { value: "/forms2", label: "/forms2" },
   { value: "/graphs", label: "/graphs" },
-  { value: "/documents", label: "/documents" },
+  { value: "/documents", label: "/documents" }, 
   { value: "/iframe", label: "/iframe" },
   { value: "/iframe2", label: "/iframe2" },
   { value: "/iframe3", label: "/iframe3" },
@@ -65,12 +75,18 @@ const initialState: Record<string, TabAccess> = Object.fromEntries(
       subtitle1: "",
       subtitle2: "",
       subtitle3: "",
+      subtitle4: "",
+      subtitle5: "",
       url1: "",
       url2: "",
       url3: "",
+      url4: "",
+      url5: "",
       ipAddress1: "",
       ipAddress2: "",
       ipAddress3: "",
+      ipAddress4: "",
+      ipAddress5: "",
       order: index,
     },
   ])
@@ -96,12 +112,18 @@ const AdminTabSettings: React.FC = () => {
               subtitle1: savedTab.subtitle1 || '',
               subtitle2: savedTab.subtitle2 || '',
               subtitle3: savedTab.subtitle3 || '',
+              subtitle4: savedTab.subtitle4 || '',
+              subtitle5: savedTab.subtitle5 || '',
               url1: savedTab.url1 || '',
               url2: savedTab.url2 || '',
               url3: savedTab.url3 || '',
+              url4: savedTab.url4 || '',
+              url5: savedTab.url5 || '',
               ipAddress1: savedTab.ipAddress1 || '',
               ipAddress2: savedTab.ipAddress2 || '',
               ipAddress3: savedTab.ipAddress3 || '',
+              ipAddress4: savedTab.ipAddress4 || '',
+              ipAddress5: savedTab.ipAddress5 || '',
               order: savedTab.order !== undefined ? savedTab.order : index
             };
             return acc;
@@ -118,7 +140,7 @@ const AdminTabSettings: React.FC = () => {
   }, []);
 
   const handleCheck =
-    (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "url1" | "url2" | "url3" | "ipAddress1" | "ipAddress2" |"ipAddress3"   >) =>
+    (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "subtitle4" | "subtitle5" | "url1" | "url2" | "url3" | "url4" | "url5" | "ipAddress1" | "ipAddress2" | "ipAddress3" | "ipAddress4" | "ipAddress5">) =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -127,7 +149,7 @@ const AdminTabSettings: React.FC = () => {
       };
 
   const handleText =
-    (tabKey: string, field: "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "ipAddress1" | "ipAddress2" | "ipAddress3") =>
+    (tabKey: string, field: "customHeading" | "subtitle1" | "subtitle2" | "subtitle3" | "subtitle4" | "subtitle5" | "ipAddress1" | "ipAddress2" | "ipAddress3" | "ipAddress4" | "ipAddress5") =>
       (e: React.ChangeEvent<HTMLInputElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -136,7 +158,7 @@ const AdminTabSettings: React.FC = () => {
       };
 
   const handleSelect =
-    (tabKey: string, field: "url1" | "url2" | "url3") =>
+    (tabKey: string, field: "url1" | "url2" | "url3" | "url4" | "url5") =>
       (e: React.ChangeEvent<HTMLSelectElement>) => {
         setTabState((prev) => ({
           ...prev,
@@ -203,127 +225,59 @@ const AdminTabSettings: React.FC = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                          <input
-                            type="text"
-                            placeholder="Subtitle 1"
-                            value={config.subtitle1}
-                            onChange={handleText(tab.key, "subtitle1")}
-                            style={{
-                              border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", width: "100%"
-                            }}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Subtitle 2"
-                            value={config.subtitle2}
-                            onChange={handleText(tab.key, "subtitle2")}
-                            style={{
-                              border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", width: "100%"
-                            }}
-                          />
-                          <input
-                            type="text"
-                            placeholder="Subtitle 3"
-                            value={config.subtitle3}
-                            onChange={handleText(tab.key, "subtitle3")}
-                            style={{
-                              border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", width: "100%"
-                            }}
-                          />
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <input
+                              key={num}
+                              type="text"
+                              placeholder={`Subtitle ${num}`}
+                              value={config[`subtitle${num}` as keyof TabAccess] as string}
+                              onChange={handleText(tab.key, `subtitle${num}` as any)}
+                              style={{
+                                border: "1px solid #d1d5db", borderRadius: ".375rem",
+                                padding: ".4rem", fontSize: ".875rem", width: "100%"
+                              }}
+                            />
+                          ))}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                          {/* URL Dropdown 1 */}
-                          <select
-                            value={config.url1}
-                            onChange={handleSelect(tab.key, "url1")}
-                            style={{
-                              border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", width: "100%",
-                              backgroundColor: "white", cursor: "pointer",
-                              minHeight: "2.5rem"
-                            }}
-                          >
-                            {URL_OPTIONS.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                          
-                          {/* URL Dropdown 2 */}
-                          <select
-                            value={config.url2}
-                            onChange={handleSelect(tab.key, "url2")}
-                            style={{
-                              border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", width: "100%",
-                              backgroundColor: "white", cursor: "pointer",
-                              minHeight: "2.5rem"
-                            }}
-                          >
-                            {URL_OPTIONS.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                          
-                          {/* URL Dropdown 3 */}
-                          <select
-                            value={config.url3}
-                            onChange={handleSelect(tab.key, "url3")}
-                            style={{
-                              border: "1px solid #d1d5db", borderRadius: ".375rem",
-                              padding: ".4rem", fontSize: ".875rem", width: "100%",
-                              backgroundColor: "white", cursor: "pointer",
-                              minHeight: "2.5rem"
-                            }}
-                          >
-                            {URL_OPTIONS.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <select
+                              key={num}
+                              value={config[`url${num}` as keyof TabAccess] as string}
+                              onChange={handleSelect(tab.key, `url${num}` as any)}
+                              style={{
+                                border: "1px solid #d1d5db", borderRadius: ".375rem",
+                                padding: ".4rem", fontSize: ".875rem", width: "100%",
+                                backgroundColor: "white", cursor: "pointer",
+                                minHeight: "2.5rem"
+                              }}
+                            >
+                              {URL_OPTIONS.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          ))}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                        <input
-                          type="text"
-                          placeholder="IP Address"
-                          value={config.ipAddress1}
-                          onChange={handleText(tab.key, "ipAddress1")}
-                          style={{
-                            border: "1px solid #d1d5db", borderRadius: ".375rem",
-                            padding: ".4rem", fontSize: ".875rem", width: "100%"
-                          }}
-                        />
-                        <input
-                          type="text"
-                          placeholder="IP Address"
-                          value={config.ipAddress2}
-                          onChange={handleText(tab.key, "ipAddress2")}
-                          style={{
-                            border: "1px solid #d1d5db", borderRadius: ".375rem",
-                            padding: ".4rem", fontSize: ".875rem", width: "100%"
-                          }}
-                        />
-                        <input
-                          type="text"
-                          placeholder="IP Address"
-                          value={config.ipAddress3}
-                          onChange={handleText(tab.key, "ipAddress3")}
-                          style={{
-                            border: "1px solid #d1d5db", borderRadius: ".375rem",
-                            padding: ".4rem", fontSize: ".875rem", width: "100%"
-                          }}
-                        />
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <input
+                              key={num}
+                              type="text"
+                              placeholder="IP Address"
+                              value={config[`ipAddress${num}` as keyof TabAccess] as string}
+                              onChange={handleText(tab.key, `ipAddress${num}` as any)}
+                              style={{
+                                border: "1px solid #d1d5db", borderRadius: ".375rem",
+                                padding: ".4rem", fontSize: ".875rem", width: "100%"
+                              }}
+                            />
+                          ))}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">

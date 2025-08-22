@@ -7,6 +7,8 @@ import RegisterPage from '@/features/RegisterPage';
 import ForgotPasswordPage from '@/features/ForgotPasswordPage';
 import RetrievalTestingFree from '@/features/RetrievalTestingFree';
 import UshahidiMapPage from '@/features/UshahidiMapPage';
+import UshahidiMapPage1 from '@/features/UshahidiMap1';
+import UshahidiMapPage2 from '@/features/UshahidiMap2';
 import AgentsPage from '@/features/AgentsPage';
 import RetrievalTesting from '@/features/RetrievalTesting';
 import DocumentManager from '@/features/DocumentManager';
@@ -20,6 +22,9 @@ import NotFound from '@/features/NotFound';
 import { useAuthStore } from '@/stores/state';
 import { useLocation } from 'react-router-dom';
 import FormBuilderPage from '@/features/FormBuilderPage';
+import FormBuilderPage1 from '@/features/FormBuilderPage1';
+import FormBuilderPage2 from '@/features/FormBuilderPage1';
+
 import RetrievalTestingFree2 from './features/RetrievalTestingFree2';
 import RetrievalTestingFree3 from './features/RetrievalTestingFree3';
 import RetrievalTestingFree4 from './features/RetrievalTestingFree4';
@@ -70,6 +75,8 @@ export default function AppRouter() {
             <Route index path="retrieval4" element={<RetrievalTestingFree4 />} />
             <Route index path="retrieval5" element={<RetrievalTestingFree5 />} />
             <Route path="map" element={<UshahidiMapPage />} />
+            <Route path="map1" element={<UshahidiMapPage1 />} />
+            <Route path="map2" element={<UshahidiMapPage2 />} />
             <Route path="appeals" element={<AboutPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="iframe" element={<FramePage />} />
@@ -95,6 +102,8 @@ export default function AppRouter() {
             > */}
 
             <Route path="forms" element={<FormBuilderPage />} />
+            <Route path="forms1" element={<FormBuilderPage1 />} />
+            <Route path="forms2" element={<FormBuilderPage2 />} />
 
             <Route path="/access" element={<RequireProPlan><Navigate to="/access/idoc" replace /></RequireProPlan>} />
             <Route path="access/iask" element={<RequireProPlan><RetrievalTesting /></RequireProPlan>} />

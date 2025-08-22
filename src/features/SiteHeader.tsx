@@ -37,14 +37,22 @@ interface FirebaseTabConfig {
     admin?: boolean;
     customHeading?: string;
     ipAddress1?: string;
+    ipAddress2?: string;
+    ipAddress3?: string;
+    ipAddress4?: string;
+    ipAddress5?: string;
     order?: number;
     loginUrl?: string;
     subtitle1?: string;
     subtitle2?: string;
     subtitle3?: string;
+    subtitle4?: string;
+    subtitle5?: string;
     url1?: string;
     url2?: string;
     url3?: string;
+    url4?: string;
+    url5?: string;
   };
 }
 
@@ -113,43 +121,72 @@ function NavigationMenu({ tabs, role }: { tabs: NavigationTab[]; role?: string |
 
 function SubNavigationMenu({ activeTab }: { activeTab?: NavigationTab | null }) {
   const location = useLocation();
+  const { webuiTitle, webuiDescription } = useAuthStore();
   
   if (!activeTab || !activeTab.subtitles || activeTab.subtitles.length === 0) {
     return null;
   }
 
   return (
-    <div className="flex justify-center items-center gap-2 px-4 py-2 border-b bg-background sticky top-[64px] z-40">
-      {activeTab.subtitles.map((subtitle, index) => {
-        let path = activeTab.subtitleUrls[index] || '';
-        
-        if (!path) {
-          const basePath = activeTab.path.replace(/\/+$/, '');
-          const subtitleSlug = subtitle.toLowerCase().replace(/\s+/g, '-');
-          path = `${basePath}/${subtitleSlug}`;
-        }
-        
-        if (!path.startsWith('/')) path = `/${path}`;
-        path = path.replace(/\/+/g, '/');
-        
-        const isActive = location.pathname === path || 
-          (location.pathname.startsWith(path + '/') && location.pathname !== path);
-        
-        return (
-          <NavLink
-            key={index}
-            to={path}
-            className={cn(
-              'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-              isActive
-                ? 'bg-emerald-400 text-white'
-                : 'text-muted-foreground hover:bg-accent'
-            )}
-          >
-            {subtitle}
-          </NavLink>
-        );
-      })}
+    <div className="flex justify-between items-center px-4 py-2 border-b bg-background sticky top-[64px] z-40">
+      {/* Left - Branding (SiteInfo + webuiTitle same as main nav) */}
+      <div className="flex items-center gap-2">
+        <ZapIcon className="h-4 w-4 text-emerald-400" />
+        <span className="font-bold">{SiteInfo.name}</span>
+        {webuiTitle && (
+          <div className="ml-2 flex items-center">
+            <span className="mx-1 text-xs text-gray-500">|</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-sm font-medium cursor-default">
+                    {webuiTitle}
+                  </span>
+                </TooltipTrigger>
+                {webuiDescription && (
+                  <TooltipContent>{webuiDescription}</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+      </div>
+      {/* Center - Sub Navigation Links */}
+      <div className="flex justify-center items-center gap-2 flex-1">
+        {activeTab.subtitles.map((subtitle, index) => {
+          let path = activeTab.subtitleUrls[index] || '';
+          
+          if (!path) {
+            const basePath = activeTab.path.replace(/\/+$/, '');
+            const subtitleSlug = subtitle.toLowerCase().replace(/\s+/g, '-');
+            path = `${basePath}/${subtitleSlug}`;
+          }
+          
+          if (!path.startsWith('/')) path = `/${path}`;
+          path = path.replace(/\/+/g, '/');
+          
+          const isActive = location.pathname === path || 
+            (location.pathname.startsWith(path + '/') && location.pathname !== path);
+          
+          return (
+            <NavLink
+              key={index}
+              to={path}
+              className={cn(
+                'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+                isActive
+                  ? 'bg-emerald-400 text-white'
+                  : 'text-muted-foreground hover:bg-accent'
+              )}
+            >
+              {subtitle}
+            </NavLink>
+          );
+        })}
+      </div>
+
+      {/* Right side - Empty for balance */}
+      <div className="min-w-[200px]"></div>
     </div>
   );
 }
@@ -182,22 +219,26 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
             
             const label = val.customHeading || key;
             
-            // Fix path formatting
+            // Use the first IP address as path if available
             let path = val.ipAddress1 || `/${key}`;
             if (!path.startsWith('/')) path = `/${path}`;
             path = path.replace(/\/+/g, '/');
             
-            // Collect non-empty subtitles and URLs
+            // Collect non-empty subtitles and URLs (up to 5)
             const subtitles = [
               val.subtitle1 || '',
               val.subtitle2 || '',
-              val.subtitle3 || ''
+              val.subtitle3 || '',
+              val.subtitle4 || '',
+              val.subtitle5 || ''
             ].filter(subtitle => subtitle.trim() !== '');
             
             const subtitleUrls = [
               val.url1 || '',
               val.url2 || '',
-              val.url3 || ''
+              val.url3 || '',
+              val.url4 || '',
+              val.url5 || ''
             ].filter(url => url.trim() !== '');
             
             fetchedTabs.push({
