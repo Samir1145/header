@@ -1,6 +1,6 @@
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import { useCallback, useEffect, useRef, useState,useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { throttle } from '@/lib/utils'
 import { queryFreeText, queryFreeTextStream } from '@/api/lightrag'
 import { errorMessage } from '@/lib/utils'
@@ -13,8 +13,7 @@ import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
 import { saveUserQnA } from '@/api/firebaseAuth'
 import { backendFreeBaseUrl2 } from '@/lib/constants'
-import { useNavigationTabsStore } from '@/stores/navigationTabs';
-import { useLocation } from 'react-router-dom';
+import { useLoginUrl } from '@/components/useLoginUrl'
 
 
 const generateUniqueId = () => {
@@ -52,18 +51,11 @@ export default function RetrievalTestingFree2() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const messagesContainerRef = useRef<HTMLDivElement>(null)
 
-       const allTabs = useNavigationTabsStore(state => state.tabs);
-          const location = useLocation();
-          const currentPath = location.pathname.replace(/^\/+/, '');
-        
-          // Memoize matched tab only when tabs are ready
-          const matchedTab = useMemo(() => {
-            if (allTabs.length === 0) return null;
-            return allTabs.find(tab => tab.path.replace(/^\/+/, '') === currentPath);
-          }, [allTabs, currentPath]);
-        
-          const loginUrl = matchedTab?.loginUrl || backendFreeBaseUrl2;
-    console.log('loginUrl',loginUrl)
+       
+       const matchedTab = useLoginUrl();
+
+          const loginUrl = matchedTab || backendFreeBaseUrl2;
+  
 
     const scrollToBottom = useCallback(() => {
         programmaticScrollRef.current = true

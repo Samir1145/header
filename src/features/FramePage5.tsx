@@ -1,20 +1,12 @@
-import { useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useNavigationTabsStore } from '@/stores/navigationTabs';
+import { useLoginUrl } from '@/components/useLoginUrl';
 
 export default function FramePage5() {
-  const allTabs = useNavigationTabsStore(state => state.tabs);
-  const location = useLocation();
 
-  // Normalize pathname (e.g., '/agents' => 'agents')
-  const currentPath = location.pathname.replace(/^\/+/, '');
 
-  // Memoize matched tab from store
-  const matchedTab = useMemo(() => {
-    return allTabs.find(tab => tab.path.replace(/^\/+/, '') === currentPath) || null;
-  }, [allTabs, currentPath]);
+  const matchedTab = useLoginUrl();
+  const loginUrl = matchedTab || null;
 
-  const loginUrl = matchedTab?.loginUrl;
+
 
   return (
     <div className="w-full h-full">

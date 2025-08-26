@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 interface NavigationTab {
+  subtabs: any;
   label: string;
   value: string;
   path: string;

@@ -2,9 +2,6 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner';
 import ThemeProvider from '@/components/ThemeProvider';
 import MainLayout from '@/stores/MainLayout';
-import LoginPage from '@/features/LoginPage';
-import RegisterPage from '@/features/RegisterPage';
-import ForgotPasswordPage from '@/features/ForgotPasswordPage';
 import RetrievalTestingFree from '@/features/RetrievalTestingFree';
 import UshahidiMapPage from '@/features/UshahidiMapPage';
 import UshahidiMapPage1 from '@/features/UshahidiMap1';

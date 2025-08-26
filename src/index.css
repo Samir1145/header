@@ -180,3 +180,6 @@
   padding: 16px;
   border-radius: 8px;
 }
+div#ushahidi-map {
+    z-index: 44;
+}
