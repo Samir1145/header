@@ -79,14 +79,14 @@ function NavigationMenu({ tabs, role }: { tabs: NavigationTab[]; role?: string |
     }
   };
 
-  const isTabActive = (tab: NavigationTab) => {
-    if (location.pathname === tab.path) return true;
+const isTabActive = (tab: NavigationTab) => {
+  // Active only if one of the subtabs matches
+  return tab.subtabs.some(subtab =>
+    location.pathname === subtab.path ||
+    location.pathname.startsWith(subtab.path + '/')
+  );
+};
 
-    return tab.subtabs.some(subtab => 
-      location.pathname === subtab.path || 
-      location.pathname.startsWith(subtab.path + '/')
-    );
-  };
 
   return (
     <div className="flex items-center gap-2">
@@ -243,24 +243,34 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
 
   useEffect(() => {
     if (tabs.length === 0) return;
+const findActiveTab = () => {
+  for (const tab of tabs) {
+    const matchingSubtab = tab.subtabs.find(subtab =>
+      location.pathname === subtab.path ||
+      location.pathname.startsWith(subtab.path + '/')
+    );
+    if (matchingSubtab) return tab;
+  }
+  return null;
+};
 
-    const findActiveTab = () => {
-      const exactMatch = tabs.find(tab => location.pathname === tab.path);
-      if (exactMatch) return exactMatch;
+    // const findActiveTab = () => {
+    //   const exactMatch = tabs.find(tab => location.pathname === tab.path);
+    //   if (exactMatch) return exactMatch;
 
-      for (const tab of tabs) {
-        const matchingSubtab = tab.subtabs.find(subtab => 
-          location.pathname === subtab.path ||
-          location.pathname.startsWith(subtab.path + '/')
-        );
-        if (matchingSubtab) return tab;
-      }
+    //   for (const tab of tabs) {
+    //     const matchingSubtab = tab.subtabs.find(subtab => 
+    //       location.pathname === subtab.path ||
+    //       location.pathname.startsWith(subtab.path + '/')
+    //     );
+    //     if (matchingSubtab) return tab;
+    //   }
 
-      return tabs.find(tab =>
-        location.pathname.startsWith(tab.path + '/') &&
-        location.pathname !== tab.path
-      ) || null;
-    };
+    //   return tabs.find(tab =>
+    //     location.pathname.startsWith(tab.path + '/') &&
+    //     location.pathname !== tab.path
+    //   ) || null;
+    // };
 
     setActiveTab(findActiveTab());
   }, [location.pathname, tabs]);

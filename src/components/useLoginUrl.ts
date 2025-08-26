@@ -7,6 +7,7 @@ export function useLoginUrl() {
   const location = useLocation();
   const currentPath = location.pathname.replace(/^\/+/, ""); // normalize
 
+  console.log("Final loginUrl:", JSON.stringify(allTabs));
   const loginUrl = useMemo(() => {
     if (allTabs.length === 0) return null;
 
@@ -14,7 +15,7 @@ export function useLoginUrl() {
     for (const tab of allTabs) {
       if (tab.subtabs && tab.subtabs.length > 0) {
         const matchedSubtab = tab.subtabs.find(
-          (s) => s.path.replace(/^\/+/, "") === currentPath
+          (s:any) => s.path.replace(/^\/+/, "") === currentPath
         );
         if (matchedSubtab) {
           return matchedSubtab.loginUrl || null;
