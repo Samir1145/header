@@ -20,9 +20,9 @@ export default function UshahidiMapPage() {
     mapRef.current = map;
 
     const defaultIcon = new L.Icon({
-      iconUrl: 'leaflet/marker-icon.png',
-      iconRetinaUrl: 'leaflet/marker-icon-2x.png',
-      shadowUrl: 'leaflet/marker-shadow.png',
+      iconUrl: '/AskAtul/leaflet/marker-icon.png',
+      iconRetinaUrl: '/AskAtul/leaflet/marker-icon-2x.png',
+      shadowUrl: '/AskAtul/leaflet/marker-shadow.png',
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
