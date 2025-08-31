@@ -190,7 +190,7 @@ const allTabs = useNavigationTabsStore(state => state.accessTabs);
           streamError += error
         })
 
-        if (fullAnswer && currentUser?.uid) {
+        if (fullAnswer && currentUser?.uid && currentUser.email) {
           await saveUserQnA(actualQuery, fullAnswer, currentUser.uid, currentUser.email)
         }
 
@@ -202,7 +202,7 @@ const allTabs = useNavigationTabsStore(state => state.accessTabs);
         fullAnswer = response.response
         updateAssistantMessage(fullAnswer)
 
-        if (fullAnswer && currentUser?.uid) {
+        if (fullAnswer && currentUser?.uid && currentUser.email) {
           await saveUserQnA(actualQuery, fullAnswer, currentUser.uid, currentUser.email)
         }
       }

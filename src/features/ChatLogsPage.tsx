@@ -1,6 +1,6 @@
 // src/components/ChatLogTable.tsx
-import React, { useEffect, useState } from 'react'
-import { collection, getDocs, getFirestore, query, orderBy } from 'firebase/firestore'
+import { useEffect, useState } from 'react'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 

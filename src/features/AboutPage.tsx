@@ -1,7 +1,25 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
+
+interface AboutData {
+  home: {
+    headline: string;
+    text: string;
+  };
+  services: Array<{
+    name: string;
+    description: string;
+    icon: string;
+  }>;
+  products: Array<{
+    name: string;
+    description: string;
+    features: string[];
+  }>;
+  footer: string;
+}
 
 export default function AboutPage() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState<AboutData | null>(null);
   const sectionRefs = {
     Home: useRef(null),
     Services: useRef(null),
@@ -15,9 +33,7 @@ export default function AboutPage() {
       .then(setData);
   }, []);
 
-  const scrollTo = (section) => {
-    sectionRefs[section].current.scrollIntoView({ behavior: "smooth" });
-  };
+
 
   if (!data) return <div>Loading…</div>;
 

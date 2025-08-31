@@ -1,6 +1,6 @@
 // components/LoginModal.tsx
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent } from '@/components/ui/Dialog';
 import { useAuthStore } from '@/stores/state';
 import { toast } from 'sonner';

@@ -142,9 +142,9 @@ export type DocsStatusesResponse = {
 
 export type AuthStatusResponse = {
   auth_configured: boolean
-  access_token?: string
+  access_token?: string | null
   token_type?: string
-  auth_mode?: 'enabled' | 'disabled'
+  auth_mode?: 'enabled' | 'disabled' | 'firebase'
   message?: string
   core_version?: string
   api_version?: string
@@ -716,15 +716,7 @@ export const deleteDocuments = async (docIds: string[], deleteFile: boolean = fa
   return response.data
 }
 
-export interface AuthStatusResponse {
-  auth_configured: boolean
-  auth_mode: 'firebase'
-  access_token: string | null
-  core_version: string
-  api_version: string
-  webui_title?: string
-  webui_description?: string
-}
+
 
 
 export const getAuthStatus = async (): Promise<AuthStatusResponse> => {

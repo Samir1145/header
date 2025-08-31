@@ -9,7 +9,6 @@ import { navigationService } from '@/services/navigation';
 import { ZapIcon, LogOutIcon } from 'lucide-react';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/Tooltip';
