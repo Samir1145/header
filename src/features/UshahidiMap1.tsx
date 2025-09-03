@@ -13,7 +13,20 @@ export default function UshahidiMapPage1() {
          
 
 useEffect(() => {
-  if (!loginUrl || mapRef.current) return;
+  if (!loginUrl) return;
+
+  // Reset map if it already exists
+  if (mapRef.current) {
+    mapRef.current.remove();
+    mapRef.current = null;
+  }
+
+  // Ensure the map container exists
+  const mapContainer = document.getElementById('ushahidi-map');
+  if (!mapContainer) {
+    console.error('Map container not found');
+    return;
+  }
 
   const map = L.map('ushahidi-map').setView([20, 78], 5);
   mapRef.current = map;
@@ -39,20 +52,31 @@ useEffect(() => {
       return res.json();
     })
     .then(data => {
+      // Check if map still exists before adding markers
+      if (!mapRef.current) return;
+      
       const posts = Array.isArray(data.results) ? data.results : [];
       posts.forEach((post: any) => {
-        const locationArray = post.values?.['f6c07bf1-50fe-45dc-9939-630356ad3b8a'];
+        const locationArray = post.values.location_default;
         if (Array.isArray(locationArray) && locationArray.length > 0) {
           const { lat, lon } = locationArray[0];
-          if (lat && lon) {
-            L.marker([lat, lon], { icon: defaultIcon }) // <- pass custom icon here
-              .addTo(map)
+          if (lat && lon && mapRef.current) {
+            L.marker([lat, lon], { icon: defaultIcon })
+              .addTo(mapRef.current)
               .bindPopup(`<b>${post.title || 'No Title'}</b><br>${post.content || ''}`);
           }
         }
       });
     })
     .catch(err => console.error('Failed to load posts:', err));
+
+  // Cleanup function
+  return () => {
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+  };
 }, [loginUrl]);
 
 
