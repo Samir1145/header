@@ -6,9 +6,6 @@ import Button from '@/components/ui/Button'
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
     DialogClose,
 } from '@/components/ui/Dialog'
 import { firebaseRegister, getUserMetadata } from '@/api/firebaseAuth'

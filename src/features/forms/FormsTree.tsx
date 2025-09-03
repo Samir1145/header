@@ -12,6 +12,8 @@ export interface FormNode {
   id: string;
   type: 'form';
   title: string;
+  schema: Record<string, any>;
+  uiSchema?: Record<string, any>;
 }
 
 export interface FolderNode {
@@ -34,7 +36,7 @@ function TreeNodeComponent({
   onSelectForm,
   selectedFormId,
   level = 0,
-}: TreeNodeProps): JSX.Element {
+}: TreeNodeProps): React.ReactElement {
   const [expanded, setExpanded] = useState(true);
 
   const paddingLeft = `pl-${level * 4 + 2}`;
@@ -100,7 +102,7 @@ export default function FormsTree({
   tree,
   onSelectForm,
   selectedFormId,
-}: FormsTreeProps): JSX.Element {
+}: FormsTreeProps): React.ReactElement {
   return (
     <nav className="w-full max-w-xs bg-white rounded-lg shadow p-2">
       <ul className="space-y-1">

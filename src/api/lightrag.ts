@@ -142,9 +142,9 @@ export type DocsStatusesResponse = {
 
 export type AuthStatusResponse = {
   auth_configured: boolean
-  access_token?: string
+  access_token?: string | null
   token_type?: string
-  auth_mode?: 'enabled' | 'disabled'
+  auth_mode?: 'enabled' | 'disabled' | 'firebase'
   message?: string
   core_version?: string
   api_version?: string
@@ -288,10 +288,11 @@ export const queryTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdHVsZ3JvdmVyckBnbWFpbC5jb20iLCJleHAiOjE3NTY5NDk2NjQsInJvbGUiOiJ1c2VyIiwibWV0YWRhdGEiOnsiYXV0aF9tb2RlIjoiZW5hYmxlZCJ9fQ.NJjv5n4fQWfpsC0u4DnMr96JOUHkLj7iTVG1MVtBJlU';
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
+    'X-App-Source': 'vite',
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -482,10 +483,11 @@ export const queryFreeTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
+  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdHVsZ3JvdmVyckBnbWFpbC5jb20iLCJleHAiOjE3NTY5NDk2NjQsInJvbGUiOiJ1c2VyIiwibWV0YWRhdGEiOnsiYXV0aF9tb2RlIjoiZW5hYmxlZCJ9fQ.NJjv5n4fQWfpsC0u4DnMr96JOUHkLj7iTVG1MVtBJlU';
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
+    'X-App-Source': 'vite',
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -493,6 +495,8 @@ export const queryFreeTextStream = async (
   if (apiKey) {
     headers['X-API-Key'] = apiKey;
   }
+
+
 
   try {
     const response = await fetch(`${backendFreeBaseUrl}/query/stream`, {
@@ -502,6 +506,17 @@ export const queryFreeTextStream = async (
     });
 
     if (!response.ok) {
+      // Handle 401 Unauthorized error specifically
+      if (response.status === 401) {
+        // For consistency with axios interceptor, navigate to login page
+        navigationService.navigateToLogin();
+
+        // Create a specific authentication error
+        const authError = new Error('Authentication required');
+        throw authError;
+      }
+
+      // Handle other common HTTP errors with specific messages
       let errorBody = 'Unknown error';
       try {
         errorBody = await response.text(); // Try to get error details from body
@@ -716,15 +731,7 @@ export const deleteDocuments = async (docIds: string[], deleteFile: boolean = fa
   return response.data
 }
 
-export interface AuthStatusResponse {
-  auth_configured: boolean
-  auth_mode: 'firebase'
-  access_token: string | null
-  core_version: string
-  api_version: string
-  webui_title?: string
-  webui_description?: string
-}
+
 
 
 export const getAuthStatus = async (): Promise<AuthStatusResponse> => {

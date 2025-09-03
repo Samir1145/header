@@ -32,7 +32,7 @@ function findFormById(tree: TreeNode[], id: string): FormNode | null {
   return null;
 }
 
-export default function FormBuilderPage1(): JSX.Element {
+export default function FormBuilderPage1(): React.ReactElement {
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
 

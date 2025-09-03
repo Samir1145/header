@@ -1,9 +1,10 @@
 import { ButtonVariantType } from '@/components/ui/Button'
 
-export const backendBaseUrl = 'http://localhost:9621'
-export const backendFreeBaseUrl = 'http://157.245.107.100:9621'
-export const backendFreeBaseUrl2 = 'http://157.245.107.100:9622'
-export const backendFreeBaseUrl3 = 'http://157.245.107.100:9623'
+
+export const backendBaseUrl = 'http://localhost:9621' // Using remote server for now
+export const backendFreeBaseUrl = 'http://localhost:9621'
+export const backendFreeBaseUrl2 = 'http://localhost:9622'
+export const backendFreeBaseUrl3 = 'http://localhost:9623'
 export const webuiPrefix = '/webui/'
 
 export const controlButtonVariant: ButtonVariantType = 'ghost'
