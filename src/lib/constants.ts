@@ -5,6 +5,87 @@ export const backendBaseUrl = 'http://localhost:9621' // Using remote server for
 export const backendFreeBaseUrl = 'http://localhost:9621'
 export const backendFreeBaseUrl2 = 'http://localhost:9622'
 export const backendFreeBaseUrl3 = 'http://localhost:9623'
+export const backendFreeBaseUrl4 = 'http://localhost:9624'
+export const backendFreeBaseUrl5 = 'http://localhost:9625'
+export const backendFreeBaseUrl6 = 'http://localhost:9626'
+
+// Server token configuration interface
+export interface ServerConfig {
+  url: string
+  token: string
+  name: string
+}
+
+// Function to get server configurations from environment variables
+export const getServerConfigs = (): ServerConfig[] => {
+  const configs: ServerConfig[] = []
+  
+  // Check for up to 6 servers (can be extended)
+  for (let i = 1; i <= 6; i++) {
+    const url = import.meta.env[`VITE_SERVER_${i}_URL`]
+    const token = import.meta.env[`VITE_SERVER_${i}_TOKEN`]
+    
+    if (url && token) {
+      configs.push({
+        url,
+        token,
+        name: `Server ${i}`
+      })
+    }
+  }
+  
+  return configs
+}
+
+// Get all available server configurations
+export const serverConfigs = getServerConfigs()
+
+// Debug: Log all loaded server configurations
+console.log('🔧 Loaded server configurations:', serverConfigs)
+
+// Function to get token for a specific server URL
+export const getTokenForServer = async (serverUrl: string): Promise<string | null> => {
+  console.log('🔍 getTokenForServer called with:', serverUrl)
+  try {
+    const response = await fetch(`${serverUrl}/login`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        grant_type: 'password',
+        username: import.meta.env.VITE_AUTH_USERNAME || '',
+        password: import.meta.env.VITE_AUTH_PASSWORD || '',
+        scope: import.meta.env.VITE_AUTH_SCOPE || '',
+        client_id: import.meta.env.VITE_AUTH_CLIENT_ID || '',
+        client_secret: import.meta.env.VITE_AUTH_CLIENT_SECRET || ''
+      }).toString()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch auth status: ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    // Try to get access_token from response
+    if (data && typeof data.access_token === 'string') {
+      console.log('🔍 getTokenForServer found access token:', data.access_token);
+      return data.access_token;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching access token from auth status:', error);
+    return null;
+  }
+};
+
+// Function to get server URL by index
+export const getServerUrl = (index: number): string | null => {
+  const config = serverConfigs[index - 1] // Convert to 0-based index
+  return config?.url || null
+}
+
+// Array of all available server URLs for easy iteration
+export const availableServers = serverConfigs.map(config => config.url)
 export const webuiPrefix = '/webui/'
 
 export const controlButtonVariant: ButtonVariantType = 'ghost'

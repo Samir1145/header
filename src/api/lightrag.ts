@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import { backendBaseUrl } from '@/lib/constants'
+import { backendBaseUrl, getTokenForServer } from '@/lib/constants'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
 import { navigationService } from '@/services/navigation'
@@ -189,9 +189,12 @@ const axiosInstance = axios.create({
 })
 
 // Interceptor: add api key and check authentication
-axiosInstance.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use(async (config) => {
   const apiKey = useSettingsStore.getState().apiKey
-  const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
+  
+  // Get token from environment variables based on the request URL
+  const requestUrl = config.baseURL || config.url || ''
+  const token = await getTokenForServer(requestUrl)
 
   // Always include token if it exists, regardless of path
   if (token) {
@@ -210,10 +213,7 @@ axiosInstance.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response) {
       if (error.response?.status === 401) {
-        // For login API, throw error directly
-        if (error.config?.url?.includes('/retrieval')) {
-          throw error;
-        }
+        
         // For other APIs, navigate to login page
         navigationService.navigateToLogin();
 
@@ -288,7 +288,8 @@ export const queryTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdHVsZ3JvdmVyckBnbWFpbC5jb20iLCJleHAiOjE3NTY5NDk2NjQsInJvbGUiOiJ1c2VyIiwibWV0YWRhdGEiOnsiYXV0aF9tb2RlIjoiZW5hYmxlZCJ9fQ.NJjv5n4fQWfpsC0u4DnMr96JOUHkLj7iTVG1MVtBJlU';
+  const token = await getTokenForServer(backendFreeBaseUrl);
+  console.log('🔍 queryTextStream token:', token);
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
@@ -483,7 +484,7 @@ export const queryFreeTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhdHVsZ3JvdmVyckBnbWFpbC5jb20iLCJleHAiOjE3NTY5NDk2NjQsInJvbGUiOiJ1c2VyIiwibWV0YWRhdGEiOnsiYXV0aF9tb2RlIjoiZW5hYmxlZCJ9fQ.NJjv5n4fQWfpsC0u4DnMr96JOUHkLj7iTVG1MVtBJlU';
+  const token = await getTokenForServer(backendFreeBaseUrl);
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
