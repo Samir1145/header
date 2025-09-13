@@ -390,6 +390,7 @@ const URL_OPTIONS = [
   { value: "/retrieval3", label: "/retrieval3" },
   { value: "/retrieval4", label: "/retrieval4" },
   { value: "/retrieval5", label: "/retrieval5" },
+  { value: "/resources", label: "/resources" },
   { value: "/map", label: "/map" },
   { value: "/map1", label: "/map1" },
   { value: "/map2", label: "/map2" },
