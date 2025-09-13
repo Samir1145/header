@@ -8,6 +8,7 @@ import StatusIndicator from '@/components/status/StatusIndicator';
 import NetworkStatus from '@/components/NetworkStatus';
 import SiteHeader from '@/features/SiteHeader';
 import { useAuthStore } from '@/stores/state';
+import { useSettingsStore } from '@/stores/settings';
 import { getAuthStatus } from '@/api/firebaseAuth';
 import { navigationService } from '@/services/navigation';
 import { ZapIcon } from 'lucide-react';

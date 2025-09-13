@@ -7,6 +7,7 @@ import { Message, QueryRequest } from '@/api/lightrag'
 type Theme = 'dark' | 'light' | 'system'
 type Language = 'en' | 'zh' | 'fr' | 'ar' | 'zh_TW'
 type Tab = 'documents' | 'knowledge-graph' | 'retrieval' | 'api'
+type MenuStyle = 'two-row' | 'single-row'
 
 interface SettingsState {
   // Document manager settings
@@ -67,6 +68,10 @@ interface SettingsState {
 
   currentTab: Tab
   setCurrentTab: (tab: Tab) => void
+
+  // Menu style settings
+  menuStyle: MenuStyle
+  setMenuStyle: (style: MenuStyle) => void
 }
 
 const useSettingsStoreBase = create<SettingsState>()(
@@ -101,6 +106,8 @@ const useSettingsStoreBase = create<SettingsState>()(
 
       currentTab: 'documents',
       showFileName: false,
+
+      menuStyle: 'two-row',
 
       retrievalHistory: [],
 
@@ -164,12 +171,14 @@ const useSettingsStoreBase = create<SettingsState>()(
         })),
 
       setShowFileName: (show: boolean) => set({ showFileName: show }),
-      setShowLegend: (show: boolean) => set({ showLegend: show })
+      setShowLegend: (show: boolean) => set({ showLegend: show }),
+
+      setMenuStyle: (menuStyle: MenuStyle) => set({ menuStyle })
     }),
     {
       name: 'settings-storage',
       storage: createJSONStorage(() => localStorage),
-      version: 13,
+      version: 14,
       migrate: (state: any, version: number) => {
         if (version < 2) {
           state.showEdgeLabel = false
@@ -233,6 +242,10 @@ const useSettingsStoreBase = create<SettingsState>()(
             state.querySettings.user_prompt = ''
           }
         }
+        if (version < 14) {
+          // Add menu style setting for older versions
+          state.menuStyle = 'two-row'
+        }
         return state
       }
     }
@@ -241,4 +254,4 @@ const useSettingsStoreBase = create<SettingsState>()(
 
 const useSettingsStore = createSelectors(useSettingsStoreBase)
 
-export { useSettingsStore, type Theme }
+export { useSettingsStore, type Theme, type MenuStyle }
