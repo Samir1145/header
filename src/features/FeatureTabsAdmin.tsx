@@ -355,6 +355,7 @@ import React, { useState, useEffect } from "react";
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { useSettingsStore } from '@/stores/settings';
 
 type SubTab = {
   title: string;
@@ -368,6 +369,7 @@ type TabAccess = {
   customHeading: string;
   order: number;
   subtabs: SubTab[];
+  path?: string; // For single-row menu direct navigation
 };
 
 type SiteSettings = {
@@ -425,6 +427,7 @@ const initialState: Record<string, TabAccess> = Object.fromEntries(
       admin: false,
       customHeading: "",
       order: index,
+      path: "",
       subtabs: Array.from({ length: 5 }).map(() => ({
         title: "",
         path: "",
@@ -441,6 +444,7 @@ const AdminTabSettings: React.FC = () => {
     siteTitle: "",
     siteHeader: "",
   });
+  const { menuStyle, setMenuStyle } = useSettingsStore();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -449,13 +453,18 @@ const AdminTabSettings: React.FC = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const savedData = docSnap.data();
-          const mergedState: Record<string, TabAccess> = TABS.reduce((acc, tab, index) => {
+          // Handle both predefined tabs and dynamically added menus
+          const mergedState: Record<string, TabAccess> = {};
+          
+          // First, add predefined tabs
+          TABS.forEach((tab, index) => {
             const savedTab = savedData[tab.key] || {};
-            acc[tab.key] = {
+            mergedState[tab.key] = {
               public: savedTab.public || false,
               admin: savedTab.admin || false,
               customHeading: savedTab.customHeading || "",
               order: savedTab.order !== undefined ? savedTab.order : index,
+              path: savedTab.path || "", // Load path field from database
               subtabs: savedTab.subtabs || [
                 { title: "", path: "", loginUrl: "" },
                 { title: "", path: "", loginUrl: "" },
@@ -464,8 +473,28 @@ const AdminTabSettings: React.FC = () => {
                 { title: "", path: "", loginUrl: "" }
               ]
             };
-            return acc;
-          }, {} as Record<string, TabAccess>);
+          });
+          
+          // Then, add any dynamically added menus
+          Object.keys(savedData).forEach(key => {
+            if (!TABS.find(tab => tab.key === key) && key !== 'siteSettings') {
+              const savedTab = savedData[key];
+              mergedState[key] = {
+                public: savedTab.public || false,
+                admin: savedTab.admin || false,
+                customHeading: savedTab.customHeading || "",
+                order: savedTab.order !== undefined ? savedTab.order : 999,
+                path: savedTab.path || "", // Load path field from database
+                subtabs: savedTab.subtabs || [
+                  { title: "", path: "", loginUrl: "" },
+                  { title: "", path: "", loginUrl: "" },
+                  { title: "", path: "", loginUrl: "" },
+                  { title: "", path: "", loginUrl: "" },
+                  { title: "", path: "", loginUrl: "" }
+                ]
+              };
+            }
+          });
           setTabState(mergedState);
 
           if (savedData.siteSettings) {
@@ -502,6 +531,43 @@ const AdminTabSettings: React.FC = () => {
         }));
       };
 
+  const handlePath =
+    (tabKey: string) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTabState((prev) => ({
+          ...prev,
+          [tabKey]: { ...prev[tabKey], path: e.target.value },
+        }));
+      };
+
+  const addNewMenu = () => {
+    const newKey = `menu_${Date.now()}`;
+    const newOrder = Math.max(...Object.values(tabState).map(tab => tab.order)) + 1;
+    setTabState((prev) => ({
+      ...prev,
+      [newKey]: {
+        public: false,
+        admin: false,
+        customHeading: "",
+        order: newOrder,
+        path: "",
+        subtabs: Array.from({ length: 5 }).map(() => ({
+          title: "",
+          path: "",
+          loginUrl: ""
+        }))
+      }
+    }));
+  };
+
+  const removeMenu = (tabKey: string) => {
+    setTabState((prev) => {
+      const newState = { ...prev };
+      delete newState[tabKey];
+      return newState;
+    });
+  };
+
   const handleSubtabChange =
     (tabKey: string, index: number, field: keyof SubTab) =>
       (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -522,7 +588,11 @@ const handleSave = async () => {
           path: tab.subtabs[i]?.path || "",
           loginUrl: tab.subtabs[i]?.loginUrl || "",
         }));
-        return [key, { ...tab, subtabs: paddedSubtabs }];
+        return [key, { 
+          ...tab, 
+          subtabs: paddedSubtabs,
+          path: tab.path || "" // Include the path field for single-row menu
+        }];
       })
     );
 
@@ -550,7 +620,7 @@ const handleSave = async () => {
         </div>
         <div className="card-content flex-1 flex flex-col min-h-0 overflow-auto">
           <div className="overflow-auto border rounded-lg shadow-sm">
-            <div className="mb-6 grid grid-cols-2 gap-4">
+            <div className="mb-6 grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <input
@@ -569,6 +639,17 @@ const handleSave = async () => {
                   className="w-full border border-gray-300 rounded-md p-2 text-sm"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Menu Style</label>
+                <select
+                  value={menuStyle}
+                  onChange={(e) => setMenuStyle(e.target.value as 'two-row' | 'single-row')}
+                  className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                >
+                  <option value="two-row">Two Row Menu (Current)</option>
+                  <option value="single-row">Single Row Menu</option>
+                </select>
+              </div>
             </div>
 
             <table className="min-w-full text-sm text-left">
@@ -576,72 +657,103 @@ const handleSave = async () => {
                 <tr>
                   <th className="px-4 py-3">Index</th>
                   <th className="px-4 py-3">Title</th>
-                  <th className="px-4 py-3">Subtabs</th>
+                  {menuStyle === 'single-row' && <th className="px-4 py-3">Path</th>}
+                  {menuStyle === 'two-row' && <th className="px-4 py-3">Subtabs</th>}
                   <th className="px-4 py-3 text-center">Public</th>
                   <th className="px-4 py-3 text-center">Admin</th>
+                  <th className="px-4 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {TABS.map((tab, index) => {
-                  const config = tabState[tab.key];
-                  return (
-                    <tr key={tab.key} className="border-t border-slate-200">
-                      <td className="px-4 py-3 text-center font-medium text-gray-900">
-                        {index + 1}
-                      </td>
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={config.customHeading}
-                          onChange={handleHeading(tab.key)}
-                          className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-2">
-                          {config.subtabs.map((sub, i) => (
-                            <div key={i} className="grid grid-cols-3 gap-2">
-                              <input
-                                type="text"
-                                placeholder="Subtitle"
-                                value={sub.title}
-                                onChange={handleSubtabChange(tab.key, i, "title")}
-                                className="border border-gray-300 rounded-md p-2 text-sm"
-                              />
-                              <select
-                                value={sub.path}
-                                onChange={handleSubtabChange(tab.key, i, "path")}
-                                className="border border-gray-300 rounded-md p-2 text-sm"
-                              >
-                                {URL_OPTIONS.map(option => (
-                                  <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                              </select>
-                              <input
-                                type="text"
-                                placeholder="Login URL"
-                                value={sub.loginUrl}
-                                onChange={handleSubtabChange(tab.key, i, "loginUrl")}
-                                className="border border-gray-300 rounded-md p-2 text-sm"
-                              />
+                {Object.entries(tabState)
+                  .sort(([, a], [, b]) => a.order - b.order)
+                  .map(([tabKey, config], index) => {
+                    return (
+                      <tr key={tabKey} className="border-t border-slate-200">
+                        <td className="px-4 py-3 text-center font-medium text-gray-900">
+                          {index + 1}
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={config.customHeading}
+                            onChange={handleHeading(tabKey)}
+                            className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                          />
+                        </td>
+                        {menuStyle === 'single-row' && (
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              placeholder="Enter URL path (e.g., /aboutus, /forms, https://example.com)"
+                              value={config.path || ""}
+                              onChange={handlePath(tabKey)}
+                              className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                            />
+                          </td>
+                        )}
+                        {menuStyle === 'two-row' && (
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-2">
+                              {config.subtabs.map((sub, i) => (
+                                <div key={i} className="grid grid-cols-3 gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Subtitle"
+                                    value={sub.title}
+                                    onChange={handleSubtabChange(tabKey, i, "title")}
+                                    className="border border-gray-300 rounded-md p-2 text-sm"
+                                  />
+                                  <select
+                                    value={sub.path}
+                                    onChange={handleSubtabChange(tabKey, i, "path")}
+                                    className="border border-gray-300 rounded-md p-2 text-sm"
+                                  >
+                                    {URL_OPTIONS.map(option => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    type="text"
+                                    placeholder="Login URL"
+                                    value={sub.loginUrl}
+                                    onChange={handleSubtabChange(tabKey, i, "loginUrl")}
+                                    className="border border-gray-300 rounded-md p-2 text-sm"
+                                  />
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input type="checkbox" checked={config.public} onChange={handleCheck(tab.key, "public")} />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input type="checkbox" checked={config.admin} onChange={handleCheck(tab.key, "admin")} />
-                      </td>
-                    </tr>
-                  );
-                })}
+                          </td>
+                        )}
+                        <td className="px-4 py-3 text-center">
+                          <input type="checkbox" checked={config.public} onChange={handleCheck(tabKey, "public")} />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input type="checkbox" checked={config.admin} onChange={handleCheck(tabKey, "admin")} />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => removeMenu(tabKey)}
+                            className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-between">
+            <button
+              type="button"
+              onClick={addNewMenu}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+            >
+              + Add New Menu
+            </button>
             <button
               type="button"
               disabled={isSaving}

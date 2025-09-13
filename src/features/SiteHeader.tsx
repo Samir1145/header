@@ -2,9 +2,10 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { SiteInfo } from '@/lib/constants';
 import AppSettings from '@/components/AppSettings';
 import SettingsMenu from '@/components/SettingsMenu';
+import SingleRowMenu from '@/components/SingleRowMenu';
 import { useAuthStore } from '@/stores/state';
+import { useSettingsStore } from '@/stores/settings';
 import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
 import { navigationService } from '@/services/navigation';
 import { ZapIcon, LogOutIcon } from 'lucide-react';
 import {
@@ -32,6 +33,7 @@ interface NavigationTab {
   loginUrl: string;
   subtabs: SubTab[]; 
   order: number;
+  directPath?: string; // For single-row menu direct navigation
 }
 
 interface FirebaseTabConfig {
@@ -64,7 +66,7 @@ interface FirebaseTabConfig {
   };
 }
 
-function NavigationMenu({ tabs, role }: { tabs: NavigationTab[]; role?: string | null }) {
+function NavigationMenu({ tabs }: { tabs: NavigationTab[]; role?: string | null }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -151,8 +153,8 @@ function SubNavigationMenu({ activeTab }: { activeTab?: NavigationTab | null }) 
 }
 
 export default function SiteHeader({ guestMode = false }: { guestMode?: boolean }) {
-  const { t } = useTranslation();
-  const { role, plan, username, webuiTitle, webuiDescription } = useAuthStore();
+  const { role, plan } = useAuthStore();
+  const { menuStyle } = useSettingsStore();
   const [showLogin, setShowLogin] = useState(false);
   const [tabs, setTabs] = useState<NavigationTab[]>([]);
   const [activeTab, setActiveTab] = useState<NavigationTab | null>(null);
@@ -220,7 +222,8 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
               path,
               order: val.order ?? 999,
               loginUrl: val.loginUrl || key,
-              subtabs
+              subtabs,
+              directPath: (val as any).path // Add directPath for single-row menu
             });
           }
 
@@ -301,7 +304,11 @@ const findActiveTab = () => {
 
         {/* Center - Navigation Tabs */}
         <div className="flex flex-1 justify-center items-center">
-          <NavigationMenu tabs={tabs} role={role} />
+          {menuStyle === 'single-row' ? (
+            <SingleRowMenu tabs={tabs} role={role} />
+          ) : (
+            <NavigationMenu tabs={tabs} role={role} />
+          )}
         </div>
 
         {/* Right - Actions */}
@@ -343,7 +350,7 @@ const findActiveTab = () => {
         </div>
       </header>
 
-      <SubNavigationMenu activeTab={activeTab} />
+      {menuStyle === 'two-row' && <SubNavigationMenu activeTab={activeTab} />}
     </>
   );
 }
