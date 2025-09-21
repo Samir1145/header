@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useParams } from 'react-router-dom';
 
 // Define resource types
 interface ResourceNode {
@@ -28,6 +29,7 @@ interface FirebaseResource {
   name: string;
   description?: string;
   category?: string;
+  resource_type?: string;
   url?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -45,6 +47,7 @@ function findResourceById(tree: TreeNode[], id: string): ResourceNode | null {
 }
 
 export default function ResourcesPage(): React.ReactElement {
+  const { resourceType } = useParams<{ resourceType: string }>();
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [resourcesTree, setResourcesTree] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,26 +56,57 @@ export default function ResourcesPage(): React.ReactElement {
 
   const selectedResource = selectedResourceId ? findResourceById(resourcesTree, selectedResourceId) : null;
 
-  // Fetch resources from Firebase
+  // Fetch resources from Firebase filtered by resource_type
   useEffect(() => {
     const fetchResources = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        const resourcesRef = collection(db, 'resources');
-        const q = query(resourcesRef, orderBy('name', 'asc'));
-        const querySnapshot = await getDocs(q);
+        if (!resourceType) {
+          setError('Resource type not specified in URL');
+          setLoading(false);
+          return;
+        }
+
+        console.log('🔍 Fetching resources for type:', resourceType);
         
-        const resources: FirebaseResource[] = [];
+        const resourcesRef = collection(db, 'resources');
+        
+        // Try to query with resource_type filter first
+        let querySnapshot;
+        try {
+          const q = query(
+            resourcesRef, 
+            where('resource_type', '==', resourceType)
+          );
+          querySnapshot = await getDocs(q);
+        } catch (filterError) {
+          console.warn('⚠️ Filter query failed, trying without filter:', filterError);
+          // Fallback: get all resources and filter client-side
+          querySnapshot = await getDocs(resourcesRef);
+        }
+        
+        const allResources: FirebaseResource[] = [];
         querySnapshot.forEach((doc) => {
-          resources.push({
+          allResources.push({
             id: doc.id,
             ...doc.data()
           } as FirebaseResource);
         });
 
-        // Convert Firebase resources to tree structure
+        // Filter by resource_type on client side if needed
+        const resources = allResources.filter(resource => 
+          resource.resource_type === resourceType
+        );
+
+        // Sort resources by name on the client side
+        resources.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        console.log('📋 Found resources:', resources.length, resources);
+        console.log('📋 All resources:', allResources.length, allResources);
+
+        // Convert Firebase resources to tree structure grouped by category
         const tree = convertResourcesToTree(resources);
         setResourcesTree(tree);
         
@@ -86,14 +120,15 @@ export default function ResourcesPage(): React.ReactElement {
         
       } catch (err) {
         console.error('Error fetching resources:', err);
-        setError('Failed to load resources. Please try again.');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(`Failed to load resources: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
     };
 
     fetchResources();
-  }, []);
+  }, [resourceType]);
 
   // Convert Firebase resources to tree structure grouped by category
   const convertResourcesToTree = (resources: FirebaseResource[]): TreeNode[] => {
@@ -150,7 +185,9 @@ export default function ResourcesPage(): React.ReactElement {
         padding: '28px 14px',
         overflowY: 'auto'
       }}>
-        <h3 style={{ marginBottom: '20px', color: '#23235b' }}>Resources</h3>
+        <h3 style={{ marginBottom: '20px', color: '#23235b' }}>
+          Categories
+        </h3>
         
         {loading ? (
           <div style={{ 
@@ -203,7 +240,7 @@ export default function ResourcesPage(): React.ReactElement {
         {selectedResource ? (
           <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             {/* Resource Header */}
-            <div style={{
+            {/* <div style={{
               background: '#fff',
               padding: '20px 32px',
               borderBottom: '1px solid #e0e0e0',
@@ -217,7 +254,7 @@ export default function ResourcesPage(): React.ReactElement {
                   {selectedResource.description}
                 </p>
               )}
-            </div>
+            </div> */}
             
             {/* Iframe Content */}
             <div style={{ flex: '1', padding: '0', position: 'relative' }}>

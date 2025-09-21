@@ -1,13 +1,13 @@
 import { ButtonVariantType } from '@/components/ui/Button'
 
 
-export const backendBaseUrl = 'http://localhost:9621' // Using remote server for now
-export const backendFreeBaseUrl = 'http://localhost:9621'
-export const backendFreeBaseUrl2 = 'http://localhost:9622'
-export const backendFreeBaseUrl3 = 'http://localhost:9623'
-export const backendFreeBaseUrl4 = 'http://localhost:9624'
-export const backendFreeBaseUrl5 = 'http://localhost:9625'
-export const backendFreeBaseUrl6 = 'http://localhost:9626'
+export const backendBaseUrl = 'https://resolutionbazaar.com:9621' // Using remote server for now
+export const backendFreeBaseUrl = 'https://resolutionbazaar.com:9621'
+export const backendFreeBaseUrl2 = 'https://resolutionbazaar.com:9622'
+export const backendFreeBaseUrl3 = 'https://resolutionbazaar.com:9623'
+export const backendFreeBaseUrl4 = 'https://resolutionbazaar.com:9624'
+export const backendFreeBaseUrl5 = 'https://resolutionbazaar.com:9625'
+export const backendFreeBaseUrl6 = 'https://resolutionbazaar.com:9626'
 
 // Server token configuration interface
 export interface ServerConfig {
