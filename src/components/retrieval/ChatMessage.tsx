@@ -70,41 +70,49 @@ export const ChatMessage = ({ message }: { message: MessageWithError }) => { // 
       } rounded-lg px-4 py-2`}
     >
       <div className="relative">
-        <ReactMarkdown
-          className="prose dark:prose-invert max-w-none text-sm break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 [&_.katex]:text-current [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto"
-          remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[
-            ...(katexPlugin ? [[
-              katexPlugin,
-              {
-                errorColor: theme === 'dark' ? '#ef4444' : '#dc2626',
-                throwOnError: false,
-                displayMode: false
-              }
-            ] as any] : []),
-            rehypeReact
-          ]}
-          skipHtml={false}
-          // Memoize the components object to prevent unnecessary re-renders of ReactMarkdown children
-          components={useMemo(() => ({
-            code: (props: any) => ( // Add type annotation if needed, e.g., props: CodeProps from 'react-markdown/lib/ast-to-react'
-              <CodeHighlight
-                {...props}
-                renderAsDiagram={message.mermaidRendered ?? false}
-              />
-            ),
-            p: ({ children }: { children?: ReactNode }) => <p className="my-2">{children}</p>,
-            h1: ({ children }: { children?: ReactNode }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
-            h2: ({ children }: { children?: ReactNode }) => <h2 className="text-lg font-bold mt-4 mb-2">{children}</h2>,
-            h3: ({ children }: { children?: ReactNode }) => <h3 className="text-base font-bold mt-3 mb-2">{children}</h3>,
-            h4: ({ children }: { children?: ReactNode }) => <h4 className="text-base font-semibold mt-3 mb-2">{children}</h4>,
-            ul: ({ children }: { children?: ReactNode }) => <ul className="list-disc pl-5 my-2">{children}</ul>,
-            ol: ({ children }: { children?: ReactNode }) => <ol className="list-decimal pl-5 my-2">{children}</ol>,
-            li: ({ children }: { children?: ReactNode }) => <li className="my-1">{children}</li>
-          }), [message.mermaidRendered])} // Dependency ensures update if mermaid state changes
-        >
-          {message.content}
-        </ReactMarkdown>
+        {/* Check if content contains HTML tags and render accordingly */}
+        {message.content.includes('<ul>') || message.content.includes('<table>') || message.content.includes('<div>') ? (
+          <div 
+            className="prose dark:prose-invert max-w-none text-sm break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1"
+            dangerouslySetInnerHTML={{ __html: message.content }}
+          />
+        ) : (
+          <ReactMarkdown
+            className="prose dark:prose-invert max-w-none text-sm break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 [&_.katex]:text-current [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto"
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[
+              ...(katexPlugin ? [[
+                katexPlugin,
+                {
+                  errorColor: theme === 'dark' ? '#ef4444' : '#dc2626',
+                  throwOnError: false,
+                  displayMode: false
+                }
+              ] as any] : []),
+              rehypeReact
+            ]}
+            skipHtml={false}
+            // Memoize the components object to prevent unnecessary re-renders of ReactMarkdown children
+            components={useMemo(() => ({
+              code: (props: any) => ( // Add type annotation if needed, e.g., props: CodeProps from 'react-markdown/lib/ast-to-react'
+                <CodeHighlight
+                  {...props}
+                  renderAsDiagram={message.mermaidRendered ?? false}
+                />
+              ),
+              p: ({ children }: { children?: ReactNode }) => <p className="my-2">{children}</p>,
+              h1: ({ children }: { children?: ReactNode }) => <h1 className="text-xl font-bold mt-4 mb-2">{children}</h1>,
+              h2: ({ children }: { children?: ReactNode }) => <h2 className="text-lg font-bold mt-4 mb-2">{children}</h2>,
+              h3: ({ children }: { children?: ReactNode }) => <h3 className="text-base font-bold mt-3 mb-2">{children}</h3>,
+              h4: ({ children }: { children?: ReactNode }) => <h4 className="text-base font-semibold mt-3 mb-2">{children}</h4>,
+              ul: ({ children }: { children?: ReactNode }) => <ul className="list-disc pl-5 my-2">{children}</ul>,
+              ol: ({ children }: { children?: ReactNode }) => <ol className="list-decimal pl-5 my-2">{children}</ol>,
+              li: ({ children }: { children?: ReactNode }) => <li className="my-1">{children}</li>
+            }), [message.mermaidRendered])} // Dependency ensures update if mermaid state changes
+          >
+            {message.content}
+          </ReactMarkdown>
+        )}
         {message.role === 'assistant' && message.content && message.content.length > 0 && ( // Added check for message.content existence
           <Button
             onClick={handleCopyMarkdown}

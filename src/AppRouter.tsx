@@ -16,6 +16,8 @@ import TempAdminSettings from '@/features/TempAdminSettings';
 import DynamicAdminSettings from '@/features/DynamicAdminSettings';
 import AboutPage from '@/features/AboutPage';
 import ResourcesPage from '@/features/ResourcesPage';
+import WrenChatPage from '@/features/WrenChatPage';
+import NeonSearchPage from '@/features/NeonSearchPage';
 import NotFound from '@/features/NotFound';
 import { useAuthStore } from '@/stores/state';
 import { useLocation } from 'react-router-dom';
@@ -88,7 +90,9 @@ export default function AppRouter() {
             <Route path="iframe9" element={<FramePage9 />} />
             <Route path="iframe10" element={<FramePage10 />} />
             <Route path="aboutus" element={<AboutPage />} />
-            <Route path="resources" element={<ResourcesPage />} />
+            <Route path="resources/:resourceType" element={<ResourcesPage />} />
+            <Route path="wren-chat" element={<WrenChatPage />} />
+            <Route path="neon-search" element={<NeonSearchPage />} />
 
             {/* Protected pro plan /access routes */}
             {/* <Route
