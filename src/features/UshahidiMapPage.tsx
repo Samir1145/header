@@ -2,12 +2,16 @@
 import { useEffect,  useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useNavigationTabsStore } from '@/stores/navigationTabs';
 import { useLocation } from 'react-router-dom';
 import { useLoginUrl } from '@/components/useLoginUrl';
 
 export default function UshahidiMapPage() {
   const mapRef = useRef<L.Map | null>(null);
+  const clusterRef = useRef<any | null>(null);
 
   
          const matchedTab = useLoginUrl();
@@ -20,6 +24,12 @@ export default function UshahidiMapPage() {
     if (mapRef.current) {
       mapRef.current.remove();
       mapRef.current = null;
+    }
+
+    // Reset cluster if it already exists
+    if (clusterRef.current) {
+      clusterRef.current.clearLayers();
+      clusterRef.current = null;
     }
 
     // Ensure the map container exists
@@ -46,35 +56,73 @@ export default function UshahidiMapPage() {
       attribution: '© OpenStreetMap contributors',
     }).addTo(map);
 
+    // Create marker cluster group
+    const markerClusterGroup = (L as any).markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      chunkedLoading: true
+    });
+    clusterRef.current = markerClusterGroup;
+    map.addLayer(markerClusterGroup);
+
     fetch(loginUrl)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
       .then(data => {
-        console.log('API Response:', data);
-        
         // Check if map still exists before adding markers
         if (!mapRef.current) return;
         
-        const posts = Array.isArray(data.results) ? data.results : [];
-
-        posts.forEach((post: any) => {
-          const locationArray =
-            post.values?.['f6c07bf1-50fe-45dc-9939-630356ad3b8a'];
-          if (Array.isArray(locationArray) && locationArray.length > 0) {
-            const { lat, lon } = locationArray[0];
-            if (lat && lon && mapRef.current) {
-              L.marker([lat, lon], { icon: defaultIcon })
-                .addTo(mapRef.current)
-                .bindPopup(
-                  `<b>${post.title || 'No Title'}</b><br>${
-                    post.content || ''
-                  }`
-                );
+        // Handle GeoJSON FeatureCollection format
+        if (data.type === 'FeatureCollection' && Array.isArray(data.features)) {
+          data.features.forEach((feature: any) => {
+            if (feature.geometry && feature.geometry.type === 'GeometryCollection' && 
+                Array.isArray(feature.geometry.geometries)) {
+              
+              // Find Point geometry in the geometries array
+              const pointGeometry = feature.geometry.geometries.find((geom: any) => 
+                geom.type === 'Point' && Array.isArray(geom.coordinates)
+              );
+              
+              if (pointGeometry && pointGeometry.coordinates.length >= 2) {
+                const [lon, lat] = pointGeometry.coordinates;
+                if (lat && lon && clusterRef.current) {
+                  const marker = L.marker([lat, lon], { icon: defaultIcon })
+                    .bindPopup(
+                      `<b>${feature.properties?.title || 'No Title'}</b><br>${
+                        feature.properties?.description || ''
+                      }`
+                    );
+                  markerClusterGroup.addLayer(marker);
+                }
+              }
             }
-          }
-        });
+          });
+        } 
+        // Fallback for old format (if needed)
+        else {
+          const posts = Array.isArray(data.results) ? data.results : [];
+
+          posts.forEach((post: any) => {
+            const locationArray =
+              post.values?.['9408c2c5-f11e-447d-b4f9-477d09ab1d0a'];
+            if (Array.isArray(locationArray) && locationArray.length > 0) {
+              const { lat, lon } = locationArray[0];
+              if (lat && lon && clusterRef.current) {
+                const marker = L.marker([lat, lon], { icon: defaultIcon })
+                  .bindPopup(
+                    `<b>${post.title || 'No Title'}</b><br>${
+                      post.content || ''
+                    }`
+                  );
+                markerClusterGroup.addLayer(marker);
+              }
+            }
+          });
+        }
       })
       .catch(err => {
         console.error('Failed to load posts:', err);
@@ -83,6 +131,10 @@ export default function UshahidiMapPage() {
 
     // Cleanup function
     return () => {
+      if (clusterRef.current) {
+        clusterRef.current.clearLayers();
+        clusterRef.current = null;
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;

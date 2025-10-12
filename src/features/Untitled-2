@@ -1,0 +1,8 @@
+https://valuers.ushahidi.io/map   (Registered Valuers)
+https://resolutionassets.ushahidi.io/map    (Insolvent Companies)
+https://professionals.ushahidi.io/map     (Insolvency Professionals)
+
+
+
+
+https://valuers.api.ushahidi.io/api/v3/posts/geojson?limit=500
