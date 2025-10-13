@@ -79,6 +79,13 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
     
     const radius = parseInt(selectedRadius);
     onLocationChange({ lat: suggestion.lat, lng: suggestion.lng }, radius);
+    
+    // Maintain focus after selection
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
   }, [selectedRadius, onLocationChange]);
 
   // Handle keyboard navigation
@@ -128,6 +135,13 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
         });
       }
     }
+    
+    // Maintain focus after radius change
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
   }, [cityAddress, onLocationChange, suggestions.length, isLoadingSuggestions]);
 
   const handleClear = useCallback(() => {
@@ -137,6 +151,12 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
     setSuggestions([]);
     setShowSuggestions(false);
     onClear();
+    // Maintain focus after clearing
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 0);
   }, [onClear]);
 
   const handleClearInput = useCallback(() => {
@@ -172,6 +192,20 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Auto-focus on mount and maintain focus
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  // Maintain focus when suggestions change or component updates
+  useEffect(() => {
+    if (inputRef.current && !showSuggestions) {
+      inputRef.current.focus();
+    }
+  }, [showSuggestions]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
