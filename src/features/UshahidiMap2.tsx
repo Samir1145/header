@@ -1,20 +1,100 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useLoginUrl } from '@/components/useLoginUrl';
+import LocationFilter from '@/components/LocationFilter';
+import { filterMarkersByRadius, createRadiusCircle } from '@/lib/locationUtils';
 
 export default function UshahidiMapPage2() {
   const mapRef = useRef<L.Map | null>(null);
   const clusterRef = useRef<any | null>(null);
+  const radiusCircleRef = useRef<L.Circle | null>(null);
+  const allMarkersRef = useRef<Array<{ lat: number; lng: number; marker: L.Marker; data: any }>>([]);
 
+  const matchedTab = useLoginUrl();
+  const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
 
-  
+  // Handle location filter changes
+  const handleLocationChange = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
+    if (mapRef.current && center) {
+      // Determine appropriate zoom level based on radius
+      let zoomLevel = 10; // Default zoom
+      
+      if (radius === 0) {
+        zoomLevel = 5; // Show all - zoom out
+      } else if (radius <= 5) {
+        zoomLevel = 13; // City level
+      } else if (radius <= 10) {
+        zoomLevel = 12; // City area
+      } else if (radius <= 25) {
+        zoomLevel = 11; // Metropolitan area
+      } else if (radius <= 50) {
+        zoomLevel = 10; // Regional
+      } else {
+        zoomLevel = 9; // Large area
+      }
+      
+      // Center map on the selected location with appropriate zoom
+      mapRef.current.setView([center.lat, center.lng], zoomLevel);
+      
+      // Update radius circle
+      if (radiusCircleRef.current) {
+        mapRef.current.removeLayer(radiusCircleRef.current);
+      }
+      
+      const circle = createRadiusCircle(mapRef.current, center, radius);
+      if (circle) {
+        radiusCircleRef.current = circle;
+        mapRef.current.addLayer(circle);
+      }
+    }
     
-           const matchedTab = useLoginUrl();
-           const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
+    // Filter markers
+    applyMarkerFilter(center, radius);
+  }, []);
+
+  const handleClearFilter = useCallback(() => {
+    if (radiusCircleRef.current && mapRef.current) {
+      mapRef.current.removeLayer(radiusCircleRef.current);
+      radiusCircleRef.current = null;
+    }
+    
+    // Show all markers
+    applyMarkerFilter(null, 0);
+  }, []);
+
+  // Apply marker filtering
+  const applyMarkerFilter = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
+    if (!clusterRef.current) return;
+    
+    // Clear existing markers
+    clusterRef.current.clearLayers();
+    
+    if (!center || radius === 0) {
+      // Show all markers
+      allMarkersRef.current.forEach(({ marker }) => {
+        clusterRef.current.addLayer(marker);
+      });
+    } else {
+      // Filter markers by radius
+      const filteredMarkers = filterMarkersByRadius(
+        allMarkersRef.current.map(({ lat, lng, data }) => ({ lat, lng, ...data })),
+        center,
+        radius
+      );
+      
+      // Add filtered markers
+      allMarkersRef.current.forEach(({ marker, lat, lng }) => {
+        const isInRadius = filteredMarkers.some(fm => fm.lat === lat && fm.lng === lng);
+        if (isInRadius) {
+          clusterRef.current.addLayer(marker);
+        }
+      });
+    }
+  }, []);
 
 useEffect(() => {
   if (!loginUrl) return;
@@ -30,6 +110,9 @@ useEffect(() => {
     clusterRef.current.clearLayers();
     clusterRef.current = null;
   }
+  
+  // Clear stored markers
+  allMarkersRef.current = [];
 
   // Ensure the map container exists
   const mapContainer = document.getElementById('ushahidi-map');
@@ -96,6 +179,15 @@ useEffect(() => {
                       feature.properties?.description || ''
                     }`
                   );
+                
+                // Store marker for filtering
+                allMarkersRef.current.push({
+                  lat,
+                  lng: lon,
+                  marker,
+                  data: feature.properties
+                });
+                
                 markerClusterGroup.addLayer(marker);
               }
             }
@@ -112,6 +204,15 @@ useEffect(() => {
             if (lat && lon && clusterRef.current) {
               const marker = L.marker([lat, lon], { icon: defaultIcon })
                 .bindPopup(`<b>${post.title || 'No Title'}</b><br>${post.content || ''}`);
+              
+              // Store marker for filtering
+              allMarkersRef.current.push({
+                lat,
+                lng: lon,
+                marker,
+                data: post
+              });
+              
               markerClusterGroup.addLayer(marker);
             }
           }
@@ -122,6 +223,10 @@ useEffect(() => {
 
   // Cleanup function
   return () => {
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.remove();
+      radiusCircleRef.current = null;
+    }
     if (clusterRef.current) {
       clusterRef.current.clearLayers();
       clusterRef.current = null;
@@ -136,10 +241,13 @@ useEffect(() => {
 
 
   return (
-    <div className="flex size-full gap-2 px-2 pb-12 overflow-hidden">
-    {/* <div className="w-full h-screen"> */}
+    <div className="flex size-full gap-2 px-2 pb-12 overflow-hidden relative">
       <div id="ushahidi-map" className="w-full h-full rounded-md" />
-    {/* </div> */}
+      <LocationFilter
+        onLocationChange={handleLocationChange}
+        onClear={handleClearFilter}
+        className="absolute top-4 right-4 z-50"
+      />
     </div>
   );
 }
