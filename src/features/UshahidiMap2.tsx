@@ -17,60 +17,6 @@ export default function UshahidiMapPage2() {
   const matchedTab = useLoginUrl();
   const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
 
-  // Handle location filter changes
-  const handleLocationChange = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
-    if (mapRef.current && center) {
-      // Determine appropriate zoom level based on radius
-      let zoomLevel = 10; // Default zoom
-      
-      if (radius === 0) {
-        zoomLevel = 5; // Show all - zoom out
-      } else if (radius <= 5) {
-        zoomLevel = 13; // City level
-      } else if (radius <= 10) {
-        zoomLevel = 12; // City area
-      } else if (radius <= 25) {
-        zoomLevel = 11; // Metropolitan area
-      } else if (radius <= 50) {
-        zoomLevel = 10; // Regional
-      } else {
-        zoomLevel = 9; // Large area
-      }
-      
-      // Center map on the selected location with appropriate zoom
-      mapRef.current.setView([center.lat, center.lng], zoomLevel);
-      
-      // Update radius circle
-      if (radiusCircleRef.current) {
-        mapRef.current.removeLayer(radiusCircleRef.current);
-      }
-      
-      const circle = createRadiusCircle(mapRef.current, center, radius);
-      if (circle) {
-        radiusCircleRef.current = circle;
-        mapRef.current.addLayer(circle);
-      }
-    }
-    
-    // Filter markers
-    applyMarkerFilter(center, radius);
-  }, []);
-
-  const handleClearFilter = useCallback(() => {
-    if (radiusCircleRef.current && mapRef.current) {
-      mapRef.current.removeLayer(radiusCircleRef.current);
-      radiusCircleRef.current = null;
-    }
-    
-    // Reset map to original view
-    if (mapRef.current) {
-      mapRef.current.setView([20, 78], 5);
-    }
-    
-    // Show all markers
-    applyMarkerFilter(null, 0);
-  }, []);
-
   // Apply marker filtering
   const applyMarkerFilter = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
     if (!clusterRef.current) return;
@@ -100,6 +46,63 @@ export default function UshahidiMapPage2() {
       });
     }
   }, []);
+
+  // Handle location filter changes
+  const handleLocationChange = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
+    if (mapRef.current && center) {
+      // Determine appropriate zoom level based on radius
+      let zoomLevel = 12; // Default zoom for better visibility
+      
+      if (radius === 0) {
+        zoomLevel = 5; // Show all - zoom out
+      } else if (radius <= 5) {
+        zoomLevel = 15; // City level - more zoomed in
+      } else if (radius <= 10) {
+        zoomLevel = 14; // City area
+      } else if (radius <= 25) {
+        zoomLevel = 13; // Metropolitan area
+      } else if (radius <= 50) {
+        zoomLevel = 12; // Regional
+      } else {
+        zoomLevel = 11; // Large area
+      }
+      
+      // Center map on the selected location with appropriate zoom
+      mapRef.current.setView([center.lat, center.lng], zoomLevel, {
+        animate: true,
+        duration: 1.0
+      });
+      
+      // Update radius circle
+      if (radiusCircleRef.current) {
+        mapRef.current.removeLayer(radiusCircleRef.current);
+      }
+      
+      const circle = createRadiusCircle(mapRef.current, center, radius);
+      if (circle) {
+        radiusCircleRef.current = circle;
+        mapRef.current.addLayer(circle);
+      }
+    }
+    
+    // Filter markers
+    applyMarkerFilter(center, radius);
+  }, [applyMarkerFilter]);
+
+  const handleClearFilter = useCallback(() => {
+    if (radiusCircleRef.current && mapRef.current) {
+      mapRef.current.removeLayer(radiusCircleRef.current);
+      radiusCircleRef.current = null;
+    }
+    
+    // Reset map to original view
+    if (mapRef.current) {
+      mapRef.current.setView([20, 78], 5);
+    }
+    
+    // Show all markers
+    applyMarkerFilter(null, 0);
+  }, [applyMarkerFilter]);
 
 useEffect(() => {
   if (!loginUrl) return;
