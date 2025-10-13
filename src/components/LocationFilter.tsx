@@ -28,7 +28,7 @@ const radiusOptions = [
 ];
 
 export default function LocationFilter({ onLocationChange, onClear, className = '' }: LocationFilterProps) {
-  const [cityAddress, setCityAddress] = useState('Chandigarh, India');
+  const [cityAddress, setCityAddress] = useState('');
   const [selectedRadius, setSelectedRadius] = useState('10');
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
