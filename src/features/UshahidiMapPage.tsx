@@ -63,6 +63,11 @@ export default function UshahidiMapPage() {
       radiusCircleRef.current = null;
     }
     
+    // Reset map to original view
+    if (mapRef.current) {
+      mapRef.current.setView([20, 78], 5);
+    }
+    
     // Show all markers
     applyMarkerFilter(null, 0);
   }, []);
