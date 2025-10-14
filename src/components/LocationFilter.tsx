@@ -105,7 +105,7 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     }, 300);
   }, [handleCombinedSearch]);
 
-  // Debounced suggestions fetching
+  // Debounced suggestions fetching and location detection
   const handleAddressChange = useCallback((value: string) => {
     setCityAddress(value);
     setError(null);
@@ -122,6 +122,18 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
         try {
           const suggestions = await getLocationSuggestions(value);
           setSuggestions(suggestions);
+          
+          // If suggestions are available, check if the input matches any suggestion exactly
+          // This handles cases where user types a complete location that matches a suggestion
+          if (suggestions.length > 0) {
+            const exactMatch = suggestions.find(s => 
+              s.display_name.toLowerCase() === value.toLowerCase()
+            );
+            if (exactMatch) {
+              setCurrentLocationCenter({ lat: exactMatch.lat, lng: exactMatch.lng });
+              console.log('Exact match found for location:', exactMatch);
+            }
+          }
         } catch (err) {
           console.error('Suggestions error:', err);
           setSuggestions([]);
@@ -131,6 +143,10 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       } else {
         setSuggestions([]);
         setIsLoadingSuggestions(false);
+        // Clear location center if input is empty
+        if (!value.trim()) {
+          setCurrentLocationCenter(null);
+        }
       }
     }, 300);
   }, []);
