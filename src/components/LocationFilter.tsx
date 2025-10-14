@@ -14,6 +14,7 @@ interface LocationFilterProps {
     radius: number;
     searchMode: 'name' | 'location' | 'combined' | 'none';
   }) => void;
+  onSearchComplete?: () => void;
   onClear: () => void;
   className?: string;
 }
@@ -34,7 +35,7 @@ const radiusOptions = [
   { value: 0, label: 'Show all' }
 ];
 
-export default function LocationFilter({ onLocationChange, onNameSearch, onCombinedSearch, onClear, className = '' }: LocationFilterProps) {
+export default function LocationFilter({ onLocationChange, onNameSearch, onCombinedSearch, onSearchComplete, onClear, className = '' }: LocationFilterProps) {
   const [cityAddress, setCityAddress] = useState('');
   const [selectedRadius, setSelectedRadius] = useState('10');
   const [nameSearch, setNameSearch] = useState('');
@@ -47,6 +48,7 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
   // Search state management
   const [currentLocationCenter, setCurrentLocationCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [searchMode, setSearchMode] = useState<'name' | 'location' | 'combined' | 'none'>('none');
+  const [isSearching, setIsSearching] = useState(false);
   
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -86,8 +88,16 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       searchMode: newSearchMode
     };
 
+    // Show loading state
+    setIsSearching(true);
+
     // Call the combined search handler
     onCombinedSearch(searchState);
+
+    // Hide loading state after search is processed
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 1000);
   }, [nameSearch, currentLocationCenter, selectedRadius, onCombinedSearch]);
 
   // Handle combined search with specific name value (for immediate search after paste)
@@ -115,8 +125,16 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       searchMode: newSearchMode
     };
 
+    // Show loading state
+    setIsSearching(true);
+
     // Call the combined search handler
     onCombinedSearch(searchState);
+
+    // Hide loading state after search is processed
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 1000);
   }, [currentLocationCenter, selectedRadius, onCombinedSearch]);
 
   // Handle name search with debouncing
@@ -418,6 +436,16 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
             >
               Clear
             </Button>
+          </div>
+        )}
+
+        {/* Loading Indicator */}
+        {isSearching && (
+          <div className="flex items-center justify-center py-2">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+              <span className="text-sm text-gray-600">Searching...</span>
+            </div>
           </div>
         )}
 
