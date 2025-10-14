@@ -142,14 +142,19 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     setShowSuggestions(false);
     setSelectedSuggestionIndex(-1);
     
-    // Update location center and trigger combined search
+    // Update location center and immediately trigger combined search
     setCurrentLocationCenter({ lat: suggestion.lat, lng: suggestion.lng });
+    
+    // Trigger search immediately after state update
+    setTimeout(() => {
+      handleCombinedSearch();
+    }, 50);
     
     // Maintain focus after selection
     setTimeout(() => {
       maintainCityFocus();
     }, 100);
-  }, [maintainCityFocus]);
+  }, [maintainCityFocus, handleCombinedSearch]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

@@ -56,6 +56,8 @@ export default function UshahidiMapPage() {
     searchMode: 'name' | 'location' | 'combined' | 'none';
   }) => {
     const { nameSearch, locationCenter, radius, searchMode } = searchState;
+    
+    console.log('Combined search triggered:', { nameSearch, locationCenter, radius, searchMode });
 
     if (searchMode === 'none') {
       // Show all markers
@@ -162,6 +164,7 @@ export default function UshahidiMapPage() {
 
     if (searchMode === 'combined') {
       // Combined search: filter by name first, then by location
+      console.log('Combined search: filtering by name first');
       const nameMatches = allMarkersRef.current.filter(({ data }) => {
         const title = data.title || '';
         const description = data.description || '';
@@ -170,9 +173,12 @@ export default function UshahidiMapPage() {
         return title.toLowerCase().includes(searchLower) || 
                description.toLowerCase().includes(searchLower);
       });
+      
+      console.log('Name matches found:', nameMatches.length);
 
       if (nameMatches.length === 0) {
         // No name matches, clear markers
+        console.log('No name matches, clearing markers');
         if (clusterRef.current) {
           clusterRef.current.clearLayers();
         }
@@ -180,20 +186,24 @@ export default function UshahidiMapPage() {
       }
 
       if (locationCenter) {
+        console.log('Filtering by location radius:', radius);
         // Filter name matches by location radius
         const locationMatches = filterMarkersByRadius(
           nameMatches.map(({ lat, lng, data }) => ({ lat, lng, ...data })),
           locationCenter,
           radius
         );
+        
+        console.log('Location matches found:', locationMatches.length);
 
         // Show filtered markers
         if (clusterRef.current) {
           clusterRef.current.clearLayers();
-          nameMatches.forEach(({ marker, lat, lng }) => {
-            const isInRadius = locationMatches.some(fm => fm.lat === lat && fm.lng === lng);
-            if (isInRadius) {
-              clusterRef.current.addLayer(marker);
+          locationMatches.forEach(({ lat, lng }) => {
+            // Find the corresponding marker from nameMatches
+            const matchingMarker = nameMatches.find(nm => nm.lat === lat && nm.lng === lng);
+            if (matchingMarker) {
+              clusterRef.current.addLayer(matchingMarker.marker);
             }
           });
         }
