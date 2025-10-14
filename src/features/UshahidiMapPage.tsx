@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster';
@@ -14,6 +14,9 @@ export default function UshahidiMapPage() {
   const clusterRef = useRef<any | null>(null);
   const radiusCircleRef = useRef<L.Circle | null>(null);
   const allMarkersRef = useRef<Array<{ lat: number; lng: number; marker: L.Marker; data: any }>>([]);
+
+  // Loading state for initial page load
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const matchedTab = useLoginUrl();
   const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
@@ -512,10 +515,15 @@ export default function UshahidiMapPage() {
             }
           });
         }
+        
+        // Hide initial loading state after markers are loaded
+        setIsInitialLoading(false);
       })
       .catch(err => {
         console.error('Failed to load posts:', err);
         console.error('Failed URL:', loginUrl);
+        // Hide loading state even on error
+        setIsInitialLoading(false);
       });
 
     // Cleanup function
@@ -540,6 +548,18 @@ export default function UshahidiMapPage() {
   return (
     <div className="flex size-full gap-2 px-2 pb-12 overflow-hidden relative">
       <div id="ushahidi-map" className="w-full h-full rounded-md" />
+      
+      {/* Initial Loading Overlay */}
+      {isInitialLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-40">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <div className="text-lg font-medium text-gray-700">Loading map data...</div>
+            <div className="text-sm text-gray-500">Please wait while we load all pins</div>
+          </div>
+        </div>
+      )}
+      
       <LocationFilter
         onLocationChange={handleLocationChange}
         onNameSearch={handleNameSearch}
