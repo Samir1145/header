@@ -64,15 +64,98 @@ export default function UshahidiMapPage() {
     }
 
     if (searchMode === 'name') {
-      // Name search only
-      handleNameSearch(nameSearch);
+      // Name search only - implement directly
+      if (!nameSearch.trim()) {
+        applyMarkerFilter(null, 0);
+        return;
+      }
+
+      const matchingMarkers = allMarkersRef.current.filter(({ data }) => {
+        const title = data.title || '';
+        const description = data.description || '';
+        const searchLower = nameSearch.toLowerCase();
+        
+        return title.toLowerCase().includes(searchLower) || 
+               description.toLowerCase().includes(searchLower);
+      });
+
+      if (matchingMarkers.length > 0) {
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+          matchingMarkers.forEach(({ marker }) => {
+            clusterRef.current.addLayer(marker);
+          });
+        }
+
+        if (matchingMarkers.length === 1) {
+          const marker = matchingMarkers[0];
+          if (mapRef.current) {
+            mapRef.current.setView([marker.lat, marker.lng], 15, {
+              animate: true,
+              duration: 1.0
+            });
+          }
+        } else if (matchingMarkers.length > 1) {
+          if (mapRef.current && clusterRef.current) {
+            const group = new (L as any).FeatureGroup();
+            matchingMarkers.forEach(({ marker }) => {
+              group.addLayer(marker);
+            });
+            mapRef.current.fitBounds(group.getBounds().pad(0.1), {
+              animate: true,
+              duration: 1.0
+            });
+          }
+        }
+      } else {
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+        }
+      }
       return;
     }
 
     if (searchMode === 'location') {
-      // Location search only
+      // Location search only - implement directly
       if (locationCenter) {
-        handleLocationChange(locationCenter, radius);
+        // Determine appropriate zoom level based on radius
+        let zoomLevel = 12;
+        
+        if (radius === 0) {
+          zoomLevel = 5;
+        } else if (radius <= 5) {
+          zoomLevel = 15;
+        } else if (radius <= 10) {
+          zoomLevel = 14;
+        } else if (radius <= 25) {
+          zoomLevel = 13;
+        } else if (radius <= 50) {
+          zoomLevel = 12;
+        } else {
+          zoomLevel = 11;
+        }
+        
+        // Center map on the selected location with appropriate zoom
+        if (mapRef.current) {
+          mapRef.current.setView([locationCenter.lat, locationCenter.lng], zoomLevel, {
+            animate: true,
+            duration: 1.0
+          });
+          
+          // Update radius circle
+          if (radiusCircleRef.current) {
+            mapRef.current.removeLayer(radiusCircleRef.current);
+          }
+          
+          const circle = createRadiusCircle(mapRef.current, locationCenter, radius);
+          if (circle) {
+            radiusCircleRef.current = circle;
+            mapRef.current.addLayer(circle);
+          }
+        }
+        
+        // Filter markers
+        applyMarkerFilter(locationCenter, radius);
       }
       return;
     }

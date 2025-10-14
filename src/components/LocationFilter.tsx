@@ -88,23 +88,21 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
 
     // Call the combined search handler
     onCombinedSearch(searchState);
+  }, [nameSearch, currentLocationCenter, selectedRadius, onCombinedSearch]);
 
-    // Also call individual handlers for backward compatibility
-    if (hasLocationSearch) {
-      onLocationChange(currentLocationCenter, radius);
-    }
-    if (hasNameSearch) {
-      onNameSearch(nameSearch.trim());
-    }
-  }, [nameSearch, currentLocationCenter, selectedRadius, onCombinedSearch, onLocationChange, onNameSearch]);
-
-  // Handle name search
+  // Handle name search with debouncing
   const handleNameSearch = useCallback((value: string) => {
     setNameSearch(value);
-    // Trigger combined search after a short delay to allow for typing
-    setTimeout(() => {
+    
+    // Clear existing timeout
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    // Debounce the search to avoid too many calls
+    debounceRef.current = setTimeout(() => {
       handleCombinedSearch();
-    }, 100);
+    }, 300);
   }, [handleCombinedSearch]);
 
   // Debounced suggestions fetching
@@ -184,8 +182,13 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
   const handleRadiusChange = useCallback((value: string) => {
     setSelectedRadius(value);
     
-    // Trigger combined search with new radius
-    setTimeout(() => {
+    // Clear existing timeout
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    // Debounce the search to avoid too many calls
+    debounceRef.current = setTimeout(() => {
       handleCombinedSearch();
     }, 100);
     
