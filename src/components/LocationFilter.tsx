@@ -13,8 +13,7 @@ interface LocationFilterProps {
     locationCenter: { lat: number; lng: number } | null;
     radius: number;
     searchMode: 'name' | 'location' | 'combined' | 'none';
-  }) => void;
-  onSearchComplete?: () => void;
+  }, onComplete?: () => void) => void;
   onClear: () => void;
   className?: string;
 }
@@ -35,7 +34,7 @@ const radiusOptions = [
   { value: 0, label: 'Show all' }
 ];
 
-export default function LocationFilter({ onLocationChange, onNameSearch, onCombinedSearch, onSearchComplete, onClear, className = '' }: LocationFilterProps) {
+export default function LocationFilter({ onLocationChange, onNameSearch, onCombinedSearch, onClear, className = '' }: LocationFilterProps) {
   const [cityAddress, setCityAddress] = useState('');
   const [selectedRadius, setSelectedRadius] = useState('10');
   const [nameSearch, setNameSearch] = useState('');
@@ -91,13 +90,10 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     // Show loading state
     setIsSearching(true);
 
-    // Call the combined search handler
-    onCombinedSearch(searchState);
-
-    // Hide loading state after search is processed
-    setTimeout(() => {
+    // Call the combined search handler with completion callback
+    onCombinedSearch(searchState, () => {
       setIsSearching(false);
-    }, 1000);
+    });
   }, [nameSearch, currentLocationCenter, selectedRadius, onCombinedSearch]);
 
   // Handle combined search with specific name value (for immediate search after paste)
@@ -128,13 +124,10 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     // Show loading state
     setIsSearching(true);
 
-    // Call the combined search handler
-    onCombinedSearch(searchState);
-
-    // Hide loading state after search is processed
-    setTimeout(() => {
+    // Call the combined search handler with completion callback
+    onCombinedSearch(searchState, () => {
       setIsSearching(false);
-    }, 1000);
+    });
   }, [currentLocationCenter, selectedRadius, onCombinedSearch]);
 
   // Handle name search with debouncing

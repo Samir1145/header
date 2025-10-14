@@ -54,7 +54,7 @@ export default function UshahidiMapPage() {
     locationCenter: { lat: number; lng: number } | null;
     radius: number;
     searchMode: 'name' | 'location' | 'combined' | 'none';
-  }) => {
+  }, onComplete?: () => void) => {
     const { nameSearch, locationCenter, radius, searchMode } = searchState;
     
     console.log('Combined search triggered:', { nameSearch, locationCenter, radius, searchMode });
@@ -62,6 +62,7 @@ export default function UshahidiMapPage() {
     if (searchMode === 'none') {
       // Show all markers
       applyMarkerFilter(null, 0);
+      onComplete?.();
       return;
     }
 
@@ -69,6 +70,7 @@ export default function UshahidiMapPage() {
       // Name search only - implement directly
       if (!nameSearch.trim()) {
         applyMarkerFilter(null, 0);
+        onComplete?.();
         return;
       }
 
@@ -114,6 +116,7 @@ export default function UshahidiMapPage() {
           clusterRef.current.clearLayers();
         }
       }
+      onComplete?.();
       return;
     }
 
@@ -159,6 +162,7 @@ export default function UshahidiMapPage() {
         // Filter markers
         applyMarkerFilter(locationCenter, radius);
       }
+      onComplete?.();
       return;
     }
 
@@ -182,6 +186,7 @@ export default function UshahidiMapPage() {
         if (clusterRef.current) {
           clusterRef.current.clearLayers();
         }
+        onComplete?.();
         return;
       }
 
@@ -262,6 +267,7 @@ export default function UshahidiMapPage() {
           });
         }
       }
+      onComplete?.();
     }
   }, [applyMarkerFilter]);
 
