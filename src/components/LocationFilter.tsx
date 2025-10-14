@@ -90,6 +90,35 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     onCombinedSearch(searchState);
   }, [nameSearch, currentLocationCenter, selectedRadius, onCombinedSearch]);
 
+  // Handle combined search with specific name value (for immediate search after paste)
+  const handleCombinedSearchWithValue = useCallback((nameValue: string) => {
+    const hasNameSearch = nameValue.trim().length > 0;
+    const hasLocationSearch = currentLocationCenter !== null;
+    const radius = parseInt(selectedRadius);
+
+    let newSearchMode: 'name' | 'location' | 'combined' | 'none' = 'none';
+
+    if (hasNameSearch && hasLocationSearch) {
+      newSearchMode = 'combined';
+    } else if (hasNameSearch) {
+      newSearchMode = 'name';
+    } else if (hasLocationSearch) {
+      newSearchMode = 'location';
+    }
+
+    setSearchMode(newSearchMode);
+
+    const searchState = {
+      nameSearch: nameValue.trim(),
+      locationCenter: currentLocationCenter,
+      radius,
+      searchMode: newSearchMode
+    };
+
+    // Call the combined search handler
+    onCombinedSearch(searchState);
+  }, [currentLocationCenter, selectedRadius, onCombinedSearch]);
+
   // Handle name search with debouncing
   const handleNameSearch = useCallback((value: string) => {
     setNameSearch(value);
@@ -101,9 +130,10 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     
     // Debounce the search to avoid too many calls
     debounceRef.current = setTimeout(() => {
-      handleCombinedSearch();
+      // Use the current value instead of relying on state
+      handleCombinedSearchWithValue(value);
     }, 300);
-  }, [handleCombinedSearch]);
+  }, [handleCombinedSearchWithValue]);
 
   // Debounced suggestions fetching and location detection
   const handleAddressChange = useCallback((value: string) => {
@@ -412,6 +442,13 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
             ref={nameInputRef}
             value={nameSearch}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleNameSearch(e.target.value)}
+            onPaste={(e: React.ClipboardEvent<HTMLInputElement>) => {
+              // Handle paste event to ensure search is triggered
+              setTimeout(() => {
+                const pastedValue = e.currentTarget.value;
+                handleNameSearch(pastedValue);
+              }, 10);
+            }}
             onFocus={() => activeInputRef.current = 'name'}
             onBlur={() => {
               // Only switch back to city if no other input is focused
