@@ -47,6 +47,223 @@ export default function UshahidiMapPage2() {
     }
   }, []);
 
+  // Handle combined search with conditions
+  const handleCombinedSearch = useCallback((searchState: {
+    nameSearch: string;
+    locationCenter: { lat: number; lng: number } | null;
+    radius: number;
+    searchMode: 'name' | 'location' | 'combined' | 'none';
+  }) => {
+    const { nameSearch, locationCenter, radius, searchMode } = searchState;
+    
+    console.log('Combined search triggered:', { nameSearch, locationCenter, radius, searchMode });
+
+    if (searchMode === 'none') {
+      // Show all markers
+      applyMarkerFilter(null, 0);
+      return;
+    }
+
+    if (searchMode === 'name') {
+      // Name search only - implement directly
+      if (!nameSearch.trim()) {
+        applyMarkerFilter(null, 0);
+        return;
+      }
+
+      const matchingMarkers = allMarkersRef.current.filter(({ data }) => {
+        const title = data.title || '';
+        const description = data.description || '';
+        const searchLower = nameSearch.toLowerCase();
+        
+        return title.toLowerCase().includes(searchLower) || 
+               description.toLowerCase().includes(searchLower);
+      });
+
+      if (matchingMarkers.length > 0) {
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+          matchingMarkers.forEach(({ marker }) => {
+            clusterRef.current.addLayer(marker);
+          });
+        }
+
+        if (matchingMarkers.length === 1) {
+          const marker = matchingMarkers[0];
+          if (mapRef.current) {
+            mapRef.current.setView([marker.lat, marker.lng], 15, {
+              animate: true,
+              duration: 1.0
+            });
+          }
+        } else if (matchingMarkers.length > 1) {
+          if (mapRef.current && clusterRef.current) {
+            const group = new (L as any).FeatureGroup();
+            matchingMarkers.forEach(({ marker }) => {
+              group.addLayer(marker);
+            });
+            mapRef.current.fitBounds(group.getBounds().pad(0.1), {
+              animate: true,
+              duration: 1.0
+            });
+          }
+        }
+      } else {
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+        }
+      }
+      return;
+    }
+
+    if (searchMode === 'location') {
+      // Location search only - implement directly
+      if (locationCenter) {
+        // Determine appropriate zoom level based on radius
+        let zoomLevel = 12;
+        
+        if (radius === 0) {
+          zoomLevel = 5;
+        } else if (radius <= 5) {
+          zoomLevel = 15;
+        } else if (radius <= 10) {
+          zoomLevel = 14;
+        } else if (radius <= 25) {
+          zoomLevel = 13;
+        } else if (radius <= 50) {
+          zoomLevel = 12;
+        } else {
+          zoomLevel = 11;
+        }
+        
+        // Center map on the selected location with appropriate zoom
+        if (mapRef.current) {
+          mapRef.current.setView([locationCenter.lat, locationCenter.lng], zoomLevel, {
+            animate: true,
+            duration: 1.0
+          });
+          
+          // Update radius circle
+          if (radiusCircleRef.current) {
+            mapRef.current.removeLayer(radiusCircleRef.current);
+          }
+          
+          const circle = createRadiusCircle(mapRef.current, locationCenter, radius);
+          if (circle) {
+            radiusCircleRef.current = circle;
+            mapRef.current.addLayer(circle);
+          }
+        }
+        
+        // Filter markers
+        applyMarkerFilter(locationCenter, radius);
+      }
+      return;
+    }
+
+    if (searchMode === 'combined') {
+      // Combined search: filter by name first, then by location
+      console.log('Combined search: filtering by name first');
+      const nameMatches = allMarkersRef.current.filter(({ data }) => {
+        const title = data.title || '';
+        const description = data.description || '';
+        const searchLower = nameSearch.toLowerCase();
+        
+        return title.toLowerCase().includes(searchLower) || 
+               description.toLowerCase().includes(searchLower);
+      });
+      
+      console.log('Name matches found:', nameMatches.length);
+
+      if (nameMatches.length === 0) {
+        // No name matches, clear markers
+        console.log('No name matches, clearing markers');
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+        }
+        return;
+      }
+
+      if (locationCenter) {
+        console.log('Filtering by location radius:', radius);
+        // Filter name matches by location radius
+        const locationMatches = filterMarkersByRadius(
+          nameMatches.map(({ lat, lng, data }) => ({ lat, lng, ...data })),
+          locationCenter,
+          radius
+        );
+        
+        console.log('Location matches found:', locationMatches.length);
+
+        // Show filtered markers
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+          locationMatches.forEach(({ lat, lng }) => {
+            // Find the corresponding marker from nameMatches
+            const matchingMarker = nameMatches.find(nm => nm.lat === lat && nm.lng === lng);
+            if (matchingMarker) {
+              clusterRef.current.addLayer(matchingMarker.marker);
+            }
+          });
+        }
+
+        // Update map view and radius circle
+        if (mapRef.current) {
+          let zoomLevel = 12;
+          if (radius === 0) {
+            zoomLevel = 5;
+          } else if (radius <= 5) {
+            zoomLevel = 15;
+          } else if (radius <= 10) {
+            zoomLevel = 14;
+          } else if (radius <= 25) {
+            zoomLevel = 13;
+          } else if (radius <= 50) {
+            zoomLevel = 12;
+          } else {
+            zoomLevel = 11;
+          }
+
+          mapRef.current.setView([locationCenter.lat, locationCenter.lng], zoomLevel, {
+            animate: true,
+            duration: 1.0
+          });
+
+          // Update radius circle
+          if (radiusCircleRef.current) {
+            mapRef.current.removeLayer(radiusCircleRef.current);
+          }
+          
+          const circle = createRadiusCircle(mapRef.current, locationCenter, radius);
+          if (circle) {
+            radiusCircleRef.current = circle;
+            mapRef.current.addLayer(circle);
+          }
+        }
+      } else {
+        // No location, just show name matches
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+          nameMatches.forEach(({ marker }) => {
+            clusterRef.current.addLayer(marker);
+          });
+        }
+
+        // Fit bounds to show all name matches
+        if (mapRef.current && nameMatches.length > 0) {
+          const group = new (L as any).FeatureGroup();
+          nameMatches.forEach(({ marker }) => {
+            group.addLayer(marker);
+          });
+          mapRef.current.fitBounds(group.getBounds().pad(0.1), {
+            animate: true,
+            duration: 1.0
+          });
+        }
+      }
+    }
+  }, [applyMarkerFilter]);
+
   // Handle name search
   const handleNameSearch = useCallback((searchTerm: string) => {
     if (!searchTerm.trim()) {
@@ -311,6 +528,7 @@ useEffect(() => {
       <LocationFilter
         onLocationChange={handleLocationChange}
         onNameSearch={handleNameSearch}
+        onCombinedSearch={handleCombinedSearch}
         onClear={handleClearFilter}
         className="absolute top-4 right-4 z-50"
       />
