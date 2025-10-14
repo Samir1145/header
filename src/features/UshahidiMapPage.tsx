@@ -48,6 +48,63 @@ export default function UshahidiMapPage() {
     }
   }, []);
 
+  // Handle name search
+  const handleNameSearch = useCallback((searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      // If search is empty, show all markers
+      applyMarkerFilter(null, 0);
+      return;
+    }
+
+    // Find markers that match the search term
+    const matchingMarkers = allMarkersRef.current.filter(({ data }) => {
+      const title = data.title || '';
+      const description = data.description || '';
+      const searchLower = searchTerm.toLowerCase();
+      
+      return title.toLowerCase().includes(searchLower) || 
+             description.toLowerCase().includes(searchLower);
+    });
+
+    if (matchingMarkers.length > 0) {
+      // Show only matching markers
+      if (clusterRef.current) {
+        clusterRef.current.clearLayers();
+        matchingMarkers.forEach(({ marker }) => {
+          clusterRef.current.addLayer(marker);
+        });
+      }
+
+      // If there's only one match, zoom to it
+      if (matchingMarkers.length === 1) {
+        const marker = matchingMarkers[0];
+        if (mapRef.current) {
+          mapRef.current.setView([marker.lat, marker.lng], 15, {
+            animate: true,
+            duration: 1.0
+          });
+        }
+      } else if (matchingMarkers.length > 1) {
+        // If multiple matches, fit bounds to show all
+        if (mapRef.current && clusterRef.current) {
+          const group = new (L as any).FeatureGroup();
+          matchingMarkers.forEach(({ marker }) => {
+            group.addLayer(marker);
+          });
+          mapRef.current.fitBounds(group.getBounds().pad(0.1), {
+            animate: true,
+            duration: 1.0
+          });
+        }
+      }
+    } else {
+      // No matches found, clear markers
+      if (clusterRef.current) {
+        clusterRef.current.clearLayers();
+      }
+    }
+  }, []);
+
   // Handle location filter changes
   const handleLocationChange = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
     if (mapRef.current && center) {
@@ -262,6 +319,7 @@ export default function UshahidiMapPage() {
       <div id="ushahidi-map" className="w-full h-full rounded-md" />
       <LocationFilter
         onLocationChange={handleLocationChange}
+        onNameSearch={handleNameSearch}
         onClear={handleClearFilter}
         className="absolute top-4 right-4 z-50"
       />

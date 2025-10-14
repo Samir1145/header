@@ -7,6 +7,7 @@ import { getLocationSuggestions } from '@/lib/locationUtils';
 
 interface LocationFilterProps {
   onLocationChange: (center: { lat: number; lng: number } | null, radius: number) => void;
+  onNameSearch: (searchTerm: string) => void;
   onClear: () => void;
   className?: string;
 }
@@ -27,9 +28,10 @@ const radiusOptions = [
   { value: 0, label: 'Show all' }
 ];
 
-export default function LocationFilter({ onLocationChange, onClear, className = '' }: LocationFilterProps) {
+export default function LocationFilter({ onLocationChange, onNameSearch, onClear, className = '' }: LocationFilterProps) {
   const [cityAddress, setCityAddress] = useState('');
   const [selectedRadius, setSelectedRadius] = useState('10');
+  const [nameSearch, setNameSearch] = useState('');
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
@@ -38,14 +40,22 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
   
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const activeInputRef = useRef<'city' | 'name' | null>(null);
 
-  // Focus maintenance function
-  const maintainFocus = useCallback(() => {
-    if (inputRef.current) {
+  // Focus maintenance function - only for city input
+  const maintainCityFocus = useCallback(() => {
+    if (activeInputRef.current === 'city' && inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
+
+  // Handle name search
+  const handleNameSearch = useCallback((value: string) => {
+    setNameSearch(value);
+    onNameSearch(value);
+  }, [onNameSearch]);
 
   // Debounced suggestions fetching
   const handleAddressChange = useCallback((value: string) => {
@@ -89,9 +99,9 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
     
     // Maintain focus after selection
     setTimeout(() => {
-      maintainFocus();
+      maintainCityFocus();
     }, 100);
-  }, [selectedRadius, onLocationChange, maintainFocus]);
+  }, [selectedRadius, onLocationChange, maintainCityFocus]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -143,22 +153,23 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
     
     // Maintain focus after radius change
     setTimeout(() => {
-      maintainFocus();
+      maintainCityFocus();
     }, 100);
-  }, [cityAddress, onLocationChange, suggestions.length, isLoadingSuggestions, maintainFocus]);
+  }, [cityAddress, onLocationChange, suggestions.length, isLoadingSuggestions, maintainCityFocus]);
 
   const handleClear = useCallback(() => {
     setCityAddress('');
     setSelectedRadius('0');
+    setNameSearch('');
     setError(null);
     setSuggestions([]);
     setShowSuggestions(false);
     onClear();
     // Maintain focus after clearing
     setTimeout(() => {
-      maintainFocus();
+      maintainCityFocus();
     }, 0);
-  }, [onClear, maintainFocus]);
+  }, [onClear, maintainCityFocus]);
 
   const handleClearInput = useCallback(() => {
     setCityAddress('');
@@ -168,9 +179,9 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
     onClear();
     // Maintain focus on input after clearing
     setTimeout(() => {
-      maintainFocus();
+      maintainCityFocus();
     }, 0);
-  }, [onClear, maintainFocus]);
+  }, [onClear, maintainCityFocus]);
 
   // Handle clicks outside to close suggestions
   useEffect(() => {
@@ -192,35 +203,38 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
     };
   }, []);
 
-  // Auto-focus on mount and maintain focus aggressively
+  // Auto-focus on mount and maintain focus aggressively - only for city input
   useEffect(() => {
-    const focusInput = () => {
-      if (inputRef.current) {
+    const focusCityInput = () => {
+      if (activeInputRef.current === 'city' && inputRef.current) {
         inputRef.current.focus();
       }
     };
 
-    // Initial focus
-    focusInput();
+    // Initial focus on city input
+    activeInputRef.current = 'city';
+    focusCityInput();
 
-    // Set up interval to maintain focus
-    const focusInterval = setInterval(focusInput, 100);
+    // Set up interval to maintain focus only if city input is active
+    const focusInterval = setInterval(focusCityInput, 100);
 
-    // Focus on any click outside suggestions
+    // Focus on any click outside suggestions - only if city input is active
     const handleDocumentClick = (event: MouseEvent) => {
       const target = event.target as Node;
       if (
+        activeInputRef.current === 'city' &&
         !suggestionsRef.current?.contains(target) &&
-        !inputRef.current?.contains(target)
+        !inputRef.current?.contains(target) &&
+        !nameInputRef.current?.contains(target)
       ) {
-        setTimeout(focusInput, 10);
+        setTimeout(focusCityInput, 10);
       }
     };
 
-    // Focus on any keyboard event
+    // Focus on any keyboard event - only if city input is active
     const handleDocumentKeydown = (event: KeyboardEvent) => {
-      if (event.target !== inputRef.current) {
-        setTimeout(focusInput, 10);
+      if (activeInputRef.current === 'city' && event.target !== inputRef.current) {
+        setTimeout(focusCityInput, 10);
       }
     };
 
@@ -236,26 +250,26 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
 
   // Maintain focus when suggestions change or component updates
   useEffect(() => {
-    const focusInput = () => {
-      if (inputRef.current) {
+    const focusCityInput = () => {
+      if (activeInputRef.current === 'city' && inputRef.current) {
         inputRef.current.focus();
       }
     };
 
     if (!showSuggestions) {
-      setTimeout(focusInput, 10);
+      setTimeout(focusCityInput, 10);
     }
   }, [showSuggestions]);
 
-  // Aggressive focus maintenance on any state change
+  // Aggressive focus maintenance on any state change - only for city input
   useEffect(() => {
-    const focusInput = () => {
-      if (inputRef.current) {
+    const focusCityInput = () => {
+      if (activeInputRef.current === 'city' && inputRef.current) {
         inputRef.current.focus();
       }
     };
 
-    setTimeout(focusInput, 50);
+    setTimeout(focusCityInput, 50);
   }, [cityAddress, selectedRadius, suggestions.length, isLoadingSuggestions]);
 
   // Cleanup timeout on unmount
@@ -282,6 +296,27 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
           </Button>
         </div>
 
+        {/* Name Search Input */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700">Search by name</label>
+          <Input
+            ref={nameInputRef}
+            value={nameSearch}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleNameSearch(e.target.value)}
+            onFocus={() => activeInputRef.current = 'name'}
+            onBlur={() => {
+              // Only switch back to city if no other input is focused
+              setTimeout(() => {
+                if (document.activeElement !== nameInputRef.current) {
+                  activeInputRef.current = 'city';
+                }
+              }, 100);
+            }}
+            placeholder="Enter name to search"
+            className="w-full"
+          />
+        </div>
+
         {/* City/Address Input with Suggestions */}
         <div className="space-y-1 relative">
           <label className="text-sm font-medium text-gray-700">City or address</label>
@@ -291,7 +326,10 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
                       value={cityAddress}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                      onFocus={() => {
+                        activeInputRef.current = 'city';
+                        setShowSuggestions(suggestions.length > 0);
+                      }}
                       onBlur={(e) => {
                         // Prevent blur if clicking on suggestions
                         if (suggestionsRef.current?.contains(e.relatedTarget as Node)) {
@@ -299,15 +337,14 @@ export default function LocationFilter({ onLocationChange, onClear, className = 
                           return;
                         }
                         // Otherwise maintain focus
-                        setTimeout(maintainFocus, 10);
+                        setTimeout(maintainCityFocus, 10);
                       }}
                       placeholder="Enter city or address"
                       className="pr-8"
-                      disabled={isLoadingSuggestions}
                       autoFocus
                       tabIndex={0}
                     />
-            {cityAddress && (
+            {cityAddress && !isLoadingSuggestions && (
               <button
                 onClick={handleClearInput}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
