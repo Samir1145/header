@@ -143,13 +143,17 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       } else {
         setSuggestions([]);
         setIsLoadingSuggestions(false);
-        // Clear location center if input is empty
+        // Clear location center if input is empty and trigger search
         if (!value.trim()) {
           setCurrentLocationCenter(null);
+          // Trigger search to show name-only results after clearing location
+          setTimeout(() => {
+            handleCombinedSearch();
+          }, 50);
         }
       }
     }, 300);
-  }, []);
+  }, [handleCombinedSearch]);
 
   // Handle suggestion selection
   const handleSuggestionSelect = useCallback((suggestion: LocationSuggestion) => {
@@ -241,12 +245,17 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     setError(null);
     setSuggestions([]);
     setShowSuggestions(false);
-    onClear();
+    
+    // Trigger search to show name-only results after clearing location
+    setTimeout(() => {
+      handleCombinedSearch();
+    }, 50);
+    
     // Maintain focus on input after clearing
     setTimeout(() => {
       maintainCityFocus();
     }, 0);
-  }, [onClear, maintainCityFocus]);
+  }, [handleCombinedSearch, maintainCityFocus]);
 
   // Handle clicks outside to close suggestions
   useEffect(() => {
