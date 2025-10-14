@@ -48,6 +48,130 @@ export default function UshahidiMapPage() {
     }
   }, []);
 
+  // Handle combined search with conditions
+  const handleCombinedSearch = useCallback((searchState: {
+    nameSearch: string;
+    locationCenter: { lat: number; lng: number } | null;
+    radius: number;
+    searchMode: 'name' | 'location' | 'combined' | 'none';
+  }) => {
+    const { nameSearch, locationCenter, radius, searchMode } = searchState;
+
+    if (searchMode === 'none') {
+      // Show all markers
+      applyMarkerFilter(null, 0);
+      return;
+    }
+
+    if (searchMode === 'name') {
+      // Name search only
+      handleNameSearch(nameSearch);
+      return;
+    }
+
+    if (searchMode === 'location') {
+      // Location search only
+      if (locationCenter) {
+        handleLocationChange(locationCenter, radius);
+      }
+      return;
+    }
+
+    if (searchMode === 'combined') {
+      // Combined search: filter by name first, then by location
+      const nameMatches = allMarkersRef.current.filter(({ data }) => {
+        const title = data.title || '';
+        const description = data.description || '';
+        const searchLower = nameSearch.toLowerCase();
+        
+        return title.toLowerCase().includes(searchLower) || 
+               description.toLowerCase().includes(searchLower);
+      });
+
+      if (nameMatches.length === 0) {
+        // No name matches, clear markers
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+        }
+        return;
+      }
+
+      if (locationCenter) {
+        // Filter name matches by location radius
+        const locationMatches = filterMarkersByRadius(
+          nameMatches.map(({ lat, lng, data }) => ({ lat, lng, ...data })),
+          locationCenter,
+          radius
+        );
+
+        // Show filtered markers
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+          nameMatches.forEach(({ marker, lat, lng }) => {
+            const isInRadius = locationMatches.some(fm => fm.lat === lat && fm.lng === lng);
+            if (isInRadius) {
+              clusterRef.current.addLayer(marker);
+            }
+          });
+        }
+
+        // Update map view and radius circle
+        if (mapRef.current) {
+          let zoomLevel = 12;
+          if (radius === 0) {
+            zoomLevel = 5;
+          } else if (radius <= 5) {
+            zoomLevel = 15;
+          } else if (radius <= 10) {
+            zoomLevel = 14;
+          } else if (radius <= 25) {
+            zoomLevel = 13;
+          } else if (radius <= 50) {
+            zoomLevel = 12;
+          } else {
+            zoomLevel = 11;
+          }
+
+          mapRef.current.setView([locationCenter.lat, locationCenter.lng], zoomLevel, {
+            animate: true,
+            duration: 1.0
+          });
+
+          // Update radius circle
+          if (radiusCircleRef.current) {
+            mapRef.current.removeLayer(radiusCircleRef.current);
+          }
+          
+          const circle = createRadiusCircle(mapRef.current, locationCenter, radius);
+          if (circle) {
+            radiusCircleRef.current = circle;
+            mapRef.current.addLayer(circle);
+          }
+        }
+      } else {
+        // No location, just show name matches
+        if (clusterRef.current) {
+          clusterRef.current.clearLayers();
+          nameMatches.forEach(({ marker }) => {
+            clusterRef.current.addLayer(marker);
+          });
+        }
+
+        // Fit bounds to show all name matches
+        if (mapRef.current && nameMatches.length > 0) {
+          const group = new (L as any).FeatureGroup();
+          nameMatches.forEach(({ marker }) => {
+            group.addLayer(marker);
+          });
+          mapRef.current.fitBounds(group.getBounds().pad(0.1), {
+            animate: true,
+            duration: 1.0
+          });
+        }
+      }
+    }
+  }, [applyMarkerFilter]);
+
   // Handle name search
   const handleNameSearch = useCallback((searchTerm: string) => {
     if (!searchTerm.trim()) {
@@ -320,6 +444,7 @@ export default function UshahidiMapPage() {
       <LocationFilter
         onLocationChange={handleLocationChange}
         onNameSearch={handleNameSearch}
+        onCombinedSearch={handleCombinedSearch}
         onClear={handleClearFilter}
         className="absolute top-4 right-4 z-50"
       />

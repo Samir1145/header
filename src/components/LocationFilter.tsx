@@ -8,6 +8,12 @@ import { getLocationSuggestions } from '@/lib/locationUtils';
 interface LocationFilterProps {
   onLocationChange: (center: { lat: number; lng: number } | null, radius: number) => void;
   onNameSearch: (searchTerm: string) => void;
+  onCombinedSearch: (searchState: {
+    nameSearch: string;
+    locationCenter: { lat: number; lng: number } | null;
+    radius: number;
+    searchMode: 'name' | 'location' | 'combined' | 'none';
+  }) => void;
   onClear: () => void;
   className?: string;
 }
@@ -28,7 +34,7 @@ const radiusOptions = [
   { value: 0, label: 'Show all' }
 ];
 
-export default function LocationFilter({ onLocationChange, onNameSearch, onClear, className = '' }: LocationFilterProps) {
+export default function LocationFilter({ onLocationChange, onNameSearch, onCombinedSearch, onClear, className = '' }: LocationFilterProps) {
   const [cityAddress, setCityAddress] = useState('');
   const [selectedRadius, setSelectedRadius] = useState('10');
   const [nameSearch, setNameSearch] = useState('');
@@ -37,6 +43,10 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Search state management
+  const [currentLocationCenter, setCurrentLocationCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [searchMode, setSearchMode] = useState<'name' | 'location' | 'combined' | 'none'>('none');
   
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,11 +61,51 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
     }
   }, []);
 
+  // Comprehensive search handler that coordinates all inputs
+  const handleCombinedSearch = useCallback(() => {
+    const hasNameSearch = nameSearch.trim().length > 0;
+    const hasLocationSearch = currentLocationCenter !== null;
+    const radius = parseInt(selectedRadius);
+
+    let newSearchMode: 'name' | 'location' | 'combined' | 'none' = 'none';
+
+    if (hasNameSearch && hasLocationSearch) {
+      newSearchMode = 'combined';
+    } else if (hasNameSearch) {
+      newSearchMode = 'name';
+    } else if (hasLocationSearch) {
+      newSearchMode = 'location';
+    }
+
+    setSearchMode(newSearchMode);
+
+    const searchState = {
+      nameSearch: nameSearch.trim(),
+      locationCenter: currentLocationCenter,
+      radius,
+      searchMode: newSearchMode
+    };
+
+    // Call the combined search handler
+    onCombinedSearch(searchState);
+
+    // Also call individual handlers for backward compatibility
+    if (hasLocationSearch) {
+      onLocationChange(currentLocationCenter, radius);
+    }
+    if (hasNameSearch) {
+      onNameSearch(nameSearch.trim());
+    }
+  }, [nameSearch, currentLocationCenter, selectedRadius, onCombinedSearch, onLocationChange, onNameSearch]);
+
   // Handle name search
   const handleNameSearch = useCallback((value: string) => {
     setNameSearch(value);
-    onNameSearch(value);
-  }, [onNameSearch]);
+    // Trigger combined search after a short delay to allow for typing
+    setTimeout(() => {
+      handleCombinedSearch();
+    }, 100);
+  }, [handleCombinedSearch]);
 
   // Debounced suggestions fetching
   const handleAddressChange = useCallback((value: string) => {
@@ -94,14 +144,14 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
     setShowSuggestions(false);
     setSelectedSuggestionIndex(-1);
     
-    const radius = parseInt(selectedRadius);
-    onLocationChange({ lat: suggestion.lat, lng: suggestion.lng }, radius);
+    // Update location center and trigger combined search
+    setCurrentLocationCenter({ lat: suggestion.lat, lng: suggestion.lng });
     
     // Maintain focus after selection
     setTimeout(() => {
       maintainCityFocus();
     }, 100);
-  }, [selectedRadius, onLocationChange, maintainCityFocus]);
+  }, [maintainCityFocus]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -134,33 +184,23 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
   const handleRadiusChange = useCallback((value: string) => {
     setSelectedRadius(value);
     
-    if (cityAddress.trim()) {
-      const radius = parseInt(value);
-      // Only trigger if we have a valid location (not just typing)
-      if (suggestions.length === 0 && !isLoadingSuggestions) {
-        // This means we have a selected location, so we can update the radius
-        // We'll need to re-geocode the current address
-        getLocationSuggestions(cityAddress).then(suggestions => {
-          if (suggestions.length > 0) {
-            const suggestion = suggestions[0];
-            onLocationChange({ lat: suggestion.lat, lng: suggestion.lng }, radius);
-          }
-        }).catch(err => {
-          console.error('Radius change geocoding error:', err);
-        });
-      }
-    }
+    // Trigger combined search with new radius
+    setTimeout(() => {
+      handleCombinedSearch();
+    }, 100);
     
     // Maintain focus after radius change
     setTimeout(() => {
       maintainCityFocus();
     }, 100);
-  }, [cityAddress, onLocationChange, suggestions.length, isLoadingSuggestions, maintainCityFocus]);
+  }, [handleCombinedSearch, maintainCityFocus]);
 
   const handleClear = useCallback(() => {
     setCityAddress('');
     setSelectedRadius('0');
     setNameSearch('');
+    setCurrentLocationCenter(null);
+    setSearchMode('none');
     setError(null);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -173,6 +213,7 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
 
   const handleClearInput = useCallback(() => {
     setCityAddress('');
+    setCurrentLocationCenter(null);
     setError(null);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -272,6 +313,13 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
     setTimeout(focusCityInput, 50);
   }, [cityAddress, selectedRadius, suggestions.length, isLoadingSuggestions]);
 
+  // Trigger combined search when location center changes
+  useEffect(() => {
+    if (currentLocationCenter) {
+      handleCombinedSearch();
+    }
+  }, [currentLocationCenter, handleCombinedSearch]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -284,17 +332,45 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onClear
   return (
     <div className={`bg-white rounded-lg shadow-lg border p-4 max-w-sm ${className}`}>
       <div className="space-y-3">
-        {/* Clear Button */}
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            Clear
-          </Button>
-        </div>
+        {/* Search Mode Indicator */}
+        {searchMode !== 'none' && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                searchMode === 'combined' ? 'bg-blue-500' :
+                searchMode === 'name' ? 'bg-green-500' :
+                searchMode === 'location' ? 'bg-orange-500' : 'bg-gray-400'
+              }`}></div>
+              <span className="text-xs text-gray-600 capitalize">
+                {searchMode === 'combined' ? 'Name + Location Search' :
+                 searchMode === 'name' ? 'Name Search' :
+                 searchMode === 'location' ? 'Location Search' : 'No Search'}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Clear
+            </Button>
+          </div>
+        )}
+
+        {/* Clear Button - only show when no search is active */}
+        {searchMode === 'none' && (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Clear
+            </Button>
+          </div>
+        )}
 
         {/* Name Search Input */}
         <div className="space-y-1">
