@@ -192,14 +192,29 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(async (config) => {
   const apiKey = useSettingsStore.getState().apiKey
   
-  // Get token from environment variables based on the request URL
-  const requestUrl = config.baseURL || config.url || ''
-  const token = await getTokenForServer(requestUrl)
-
-  // Always include token if it exists, regardless of path
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`
+  // First, try to get Firebase token if user is authenticated
+  const auth = getAuth()
+  const currentUser = auth.currentUser
+  
+  if (currentUser) {
+    try {
+      const firebaseToken = await currentUser.getIdToken()
+      config.headers['Authorization'] = `Bearer ${firebaseToken}`
+      console.log('🔐 Using Firebase token for request to:', config.url)
+    } catch (error) {
+      console.warn('⚠️ Failed to get Firebase token:', error)
+    }
+  } else {
+    // Fallback to environment-based token if Firebase auth is not available
+    const requestUrl = config.baseURL || config.url || ''
+    const token = await getTokenForServer(requestUrl)
+    
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+      console.log('🔐 Using environment token for request to:', config.url)
+    }
   }
+  
   if (apiKey) {
     config.headers['X-API-Key'] = apiKey
   }
@@ -288,7 +303,24 @@ export const queryTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  const token = await getTokenForServer(backendFreeBaseUrl);
+  
+  // First, try to get Firebase token if user is authenticated
+  const auth = getAuth()
+  const currentUser = auth.currentUser
+  let token = null
+  
+  if (currentUser) {
+    try {
+      token = await currentUser.getIdToken()
+      console.log('🔐 Using Firebase token for stream request')
+    } catch (error) {
+      console.warn('⚠️ Failed to get Firebase token for stream:', error)
+    }
+  } else {
+    // Fallback to environment-based token
+    token = await getTokenForServer(backendFreeBaseUrl);
+  }
+  
   console.log('🔍 queryTextStream token:', token);
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -484,7 +516,24 @@ export const queryFreeTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  const token = await getTokenForServer(backendFreeBaseUrl);
+  
+  // First, try to get Firebase token if user is authenticated
+  const auth = getAuth()
+  const currentUser = auth.currentUser
+  let token = null
+  
+  if (currentUser) {
+    try {
+      token = await currentUser.getIdToken()
+      console.log('🔐 Using Firebase token for free stream request')
+    } catch (error) {
+      console.warn('⚠️ Failed to get Firebase token for free stream:', error)
+    }
+  } else {
+    // Fallback to environment-based token
+    token = await getTokenForServer(backendFreeBaseUrl);
+  }
+  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
