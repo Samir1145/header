@@ -236,7 +236,7 @@ axiosInstance.interceptors.response.use(
         if (isDocumentsEndpoint) {
           console.log('📄 Document loading failed - not logging out user')
           // For documents endpoint, just reject without logging out
-          return Promise.reject(new Error('Failed to load documents Authentication required'));
+          return Promise.reject(new Error('Authentication required'));
         }
         
         // For other APIs, navigate to login page
