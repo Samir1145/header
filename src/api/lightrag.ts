@@ -228,6 +228,16 @@ axiosInstance.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response) {
       if (error.response?.status === 401) {
+        console.warn('⚠️ Authentication failed for:', error.config?.url)
+        
+        // Check if this is a documents endpoint - don't auto-logout for document loading failures
+        const isDocumentsEndpoint = error.config?.url?.includes('/documents')
+        
+        if (isDocumentsEndpoint) {
+          console.log('📄 Document loading failed - not logging out user')
+          // For documents endpoint, just reject without logging out
+          return Promise.reject(new Error('Failed to load documents Authentication required'));
+        }
         
         // For other APIs, navigate to login page
         navigationService.navigateToLogin();
@@ -344,10 +354,10 @@ export const queryTextStream = async (
     if (!response.ok) {
       // Handle 401 Unauthorized error specifically
       if (response.status === 401) {
-        // For consistency with axios interceptor, navigate to login page
-        navigationService.navigateToLogin();
-
-        // Create a specific authentication error
+        console.warn('⚠️ Stream authentication failed for:', `${backendFreeBaseUrl}/query/stream`)
+        
+        // Don't auto-logout for stream requests - just throw error
+        console.log('🔍 Stream authentication failed - not logging out user')
         const authError = new Error('Authentication required');
         throw authError;
       }
@@ -558,10 +568,10 @@ export const queryFreeTextStream = async (
     if (!response.ok) {
       // Handle 401 Unauthorized error specifically
       if (response.status === 401) {
-        // For consistency with axios interceptor, navigate to login page
-        navigationService.navigateToLogin();
-
-        // Create a specific authentication error
+        console.warn('⚠️ Stream authentication failed for:', `${backendFreeBaseUrl}/query/stream`)
+        
+        // Don't auto-logout for stream requests - just throw error
+        console.log('🔍 Stream authentication failed - not logging out user')
         const authError = new Error('Authentication required');
         throw authError;
       }
