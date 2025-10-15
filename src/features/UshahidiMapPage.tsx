@@ -17,6 +17,9 @@ export default function UshahidiMapPage() {
 
   // Loading state for initial page load
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  // Debug loading state
+  console.log('Initial loading state:', isInitialLoading);
 
   const matchedTab = useLoginUrl();
   const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
@@ -516,14 +519,21 @@ export default function UshahidiMapPage() {
           });
         }
         
-        // Hide initial loading state after markers are loaded
-        setIsInitialLoading(false);
+        // Hide initial loading state after markers are loaded with a small delay
+        // to ensure markers are fully rendered
+        setTimeout(() => {
+          console.log('Hiding initial loading overlay');
+          setIsInitialLoading(false);
+        }, 500);
       })
       .catch(err => {
         console.error('Failed to load posts:', err);
         console.error('Failed URL:', loginUrl);
         // Hide loading state even on error
-        setIsInitialLoading(false);
+        setTimeout(() => {
+          console.log('Hiding initial loading overlay (error case)');
+          setIsInitialLoading(false);
+        }, 500);
       });
 
     // Cleanup function

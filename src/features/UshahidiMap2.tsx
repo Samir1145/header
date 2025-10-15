@@ -510,13 +510,18 @@ useEffect(() => {
         });
         }
         
-        // Hide initial loading state after markers are loaded
-        setIsInitialLoading(false);
+        // Hide initial loading state after markers are loaded with a small delay
+        // to ensure markers are fully rendered
+        setTimeout(() => {
+          setIsInitialLoading(false);
+        }, 500);
       })
       .catch(err => {
         console.error('Failed to load posts:', err);
         // Hide loading state even on error
-        setIsInitialLoading(false);
+        setTimeout(() => {
+          setIsInitialLoading(false);
+        }, 500);
       });
 
   // Cleanup function

@@ -11,6 +11,28 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// Debug Firebase configuration
+console.log('🔧 Firebase Configuration Check:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAuthDomain: !!firebaseConfig.authDomain,
+  hasProjectId: !!firebaseConfig.projectId,
+  hasStorageBucket: !!firebaseConfig.storageBucket,
+  hasMessagingSenderId: !!firebaseConfig.messagingSenderId,
+  hasAppId: !!firebaseConfig.appId,
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId
+});
+
+// Check if Firebase configuration is complete
+const isFirebaseConfigComplete = Object.values(firebaseConfig).every(value => value && value !== 'undefined');
+if (!isFirebaseConfigComplete) {
+  console.error('❌ Firebase configuration is incomplete. Please check your environment variables.');
+  console.error('Missing configuration:', Object.entries(firebaseConfig)
+    .filter(([key, value]) => !value || value === 'undefined')
+    .map(([key]) => key)
+  );
+}
+
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
