@@ -6,6 +6,9 @@ import RetrievalTestingFree from '@/features/RetrievalTestingFree';
 import UshahidiMapPage from '@/features/UshahidiMapPage';
 import UshahidiMapPage1 from '@/features/UshahidiMap1';
 import UshahidiMapPage2 from '@/features/UshahidiMap2';
+import UshahidiMapPage3 from '@/features/UshahidiMapPage3';
+import UshahidiMapPage4 from '@/features/UshahidiMapPage4';
+import UshahidiMapPage5 from '@/features/UshahidiMapPage5';
 import AgentsPage from '@/features/AgentsPage';
 import RetrievalTesting from '@/features/RetrievalTesting';
 import DocumentManager from '@/features/DocumentManager';
@@ -39,6 +42,10 @@ import FramePage7 from '@/features/FramePage7';
 import FramePage8 from '@/features/FramePage8';
 import FramePage9 from '@/features/FramePage9';
 import FramePage10 from '@/features/FramePage10';
+import FramePage11 from '@/features/FramePage11';
+import FramePage12 from '@/features/FramePage12';
+import FramePage13 from '@/features/FramePage13';
+import FramePage14 from '@/features/FramePage14';
 
 
 function RequireProPlan({ children }: { children: React.ReactNode }) {
@@ -77,6 +84,9 @@ export default function AppRouter() {
             <Route path="map" element={<UshahidiMapPage />} />
             <Route path="map1" element={<UshahidiMapPage1 />} />
             <Route path="map2" element={<UshahidiMapPage2 />} />
+            <Route path="map3" element={<UshahidiMapPage3 />} />
+            <Route path="map4" element={<UshahidiMapPage4 />} />
+            <Route path="map5" element={<UshahidiMapPage5 />} />
             <Route path="appeals" element={<AboutPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="iframe" element={<FramePage />} />
@@ -89,6 +99,10 @@ export default function AppRouter() {
             <Route path="iframe8" element={<FramePage8 />} />
             <Route path="iframe9" element={<FramePage9 />} />
             <Route path="iframe10" element={<FramePage10 />} />
+            <Route path="iframe11" element={<FramePage11 />} />
+            <Route path="iframe12" element={<FramePage12 />} />
+            <Route path="iframe13" element={<FramePage13 />} />
+            <Route path="iframe14" element={<FramePage14 />} />
             <Route path="aboutus" element={<AboutPage />} />
             <Route path="resources/:resourceType" element={<ResourcesPage />} />
             <Route path="wren-chat" element={<WrenChatPage />} />
