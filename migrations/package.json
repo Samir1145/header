@@ -1,0 +1,16 @@
+{
+  "name": "firebase-migration-scripts",
+  "version": "1.0.0",
+  "description": "Firebase database migration scripts for AskAtul project",
+  "main": "firebase-migration.js",
+  "scripts": {
+    "export": "node firebase-migration.js",
+    "import": "node firebase-import.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "keywords": ["firebase", "migration", "database"],
+  "author": "AskAtul Team",
+  "license": "MIT"
+}
