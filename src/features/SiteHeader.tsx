@@ -183,12 +183,19 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
           }
 
           for (const [key, val] of Object.entries(config)) {
-            if (!val || typeof val !== 'object' || key === 'siteSettings') continue;
+            if (!val || typeof val !== 'object' || key === 'siteSettings' || key === 'resourceTypes') continue;
 
-            if (guestMode && !val.public) continue;
-            if (!guestMode && !(val.public || val.stakeholders || val.team || val.admin)) continue;
+            // For dynamically created menus (like menu_7), show them if they have any content
+            // even if visibility flags are not set, to prevent them from disappearing
+            const isDynamicMenu = key.startsWith('menu_');
+            const hasContent = val.customHeading || (val.subtabs && val.subtabs.some((sub: any) => sub.title || sub.path));
+            
+            
+            if (guestMode && !val.public && !(isDynamicMenu && hasContent)) continue;
+            if (!guestMode && !(val.public || val.stakeholders || val.team || val.admin) && !(isDynamicMenu && hasContent)) continue;
 
             const label = val.customHeading || key;
+            
             let path = val.ipAddress1 || `/${key}`;
             if (!path.startsWith('/')) path = `/${path}`;
             path = path.replace(/\/+/g, '/');

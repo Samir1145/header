@@ -53,14 +53,6 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
   const inputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const activeInputRef = useRef<'city' | 'name' | null>(null);
-
-  // Focus maintenance function - only for city input
-  const maintainCityFocus = useCallback(() => {
-    if (activeInputRef.current === 'city' && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, []);
 
   // Comprehensive search handler that coordinates all inputs
   const handleCombinedSearch = useCallback(() => {
@@ -211,11 +203,8 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       handleCombinedSearch();
     }, 50);
     
-    // Maintain focus after selection
-    setTimeout(() => {
-      maintainCityFocus();
-    }, 100);
-  }, [maintainCityFocus, handleCombinedSearch]);
+    // Selection completed
+  }, [handleCombinedSearch]);
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -258,11 +247,8 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       handleCombinedSearch();
     }, 100);
     
-    // Maintain focus after radius change
-    setTimeout(() => {
-      maintainCityFocus();
-    }, 100);
-  }, [handleCombinedSearch, maintainCityFocus]);
+    // Radius change completed
+  }, [handleCombinedSearch]);
 
   const handleClear = useCallback(() => {
     setCityAddress('');
@@ -274,11 +260,8 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     setSuggestions([]);
     setShowSuggestions(false);
     onClear();
-    // Maintain focus after clearing
-    setTimeout(() => {
-      maintainCityFocus();
-    }, 0);
-  }, [onClear, maintainCityFocus]);
+    // Clear completed
+  }, [onClear]);
 
   const handleClearInput = useCallback(() => {
     setCityAddress('');
@@ -292,11 +275,8 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
       handleCombinedSearch();
     }, 50);
     
-    // Maintain focus on input after clearing
-    setTimeout(() => {
-      maintainCityFocus();
-    }, 0);
-  }, [handleCombinedSearch, maintainCityFocus]);
+    // Clear input completed
+  }, [handleCombinedSearch]);
 
   // Handle clicks outside to close suggestions
   useEffect(() => {
@@ -318,74 +298,7 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
     };
   }, []);
 
-  // Auto-focus on mount and maintain focus aggressively - only for city input
-  useEffect(() => {
-    const focusCityInput = () => {
-      if (activeInputRef.current === 'city' && inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-
-    // Initial focus on city input
-    activeInputRef.current = 'city';
-    focusCityInput();
-
-    // Set up interval to maintain focus only if city input is active
-    const focusInterval = setInterval(focusCityInput, 100);
-
-    // Focus on any click outside suggestions - only if city input is active
-    const handleDocumentClick = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        activeInputRef.current === 'city' &&
-        !suggestionsRef.current?.contains(target) &&
-        !inputRef.current?.contains(target) &&
-        !nameInputRef.current?.contains(target)
-      ) {
-        setTimeout(focusCityInput, 10);
-      }
-    };
-
-    // Focus on any keyboard event - only if city input is active
-    const handleDocumentKeydown = (event: KeyboardEvent) => {
-      if (activeInputRef.current === 'city' && event.target !== inputRef.current) {
-        setTimeout(focusCityInput, 10);
-      }
-    };
-
-    document.addEventListener('click', handleDocumentClick);
-    document.addEventListener('keydown', handleDocumentKeydown);
-
-    return () => {
-      clearInterval(focusInterval);
-      document.removeEventListener('click', handleDocumentClick);
-      document.removeEventListener('keydown', handleDocumentKeydown);
-    };
-  }, []);
-
-  // Maintain focus when suggestions change or component updates
-  useEffect(() => {
-    const focusCityInput = () => {
-      if (activeInputRef.current === 'city' && inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-
-    if (!showSuggestions) {
-      setTimeout(focusCityInput, 10);
-    }
-  }, [showSuggestions]);
-
-  // Aggressive focus maintenance on any state change - only for city input
-  useEffect(() => {
-    const focusCityInput = () => {
-      if (activeInputRef.current === 'city' && inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-
-    setTimeout(focusCityInput, 50);
-  }, [cityAddress, selectedRadius, suggestions.length, isLoadingSuggestions]);
+  // Remove aggressive focus maintenance - let users control focus naturally
 
   // Trigger combined search when location center changes
   useEffect(() => {
@@ -470,15 +383,8 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
                 handleNameSearch(pastedValue);
               }, 10);
             }}
-            onFocus={() => activeInputRef.current = 'name'}
-            onBlur={() => {
-              // Only switch back to city if no other input is focused
-              setTimeout(() => {
-                if (document.activeElement !== nameInputRef.current) {
-                  activeInputRef.current = 'city';
-                }
-              }, 100);
-            }}
+            onFocus={() => {}}
+            onBlur={() => {}}
             placeholder="Enter name to search"
             className="w-full"
           />
@@ -494,7 +400,6 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
                       onKeyDown={handleKeyDown}
                       onFocus={() => {
-                        activeInputRef.current = 'city';
                         setShowSuggestions(suggestions.length > 0);
                       }}
                       onBlur={(e) => {
@@ -503,12 +408,9 @@ export default function LocationFilter({ onLocationChange, onNameSearch, onCombi
                           e.preventDefault();
                           return;
                         }
-                        // Otherwise maintain focus
-                        setTimeout(maintainCityFocus, 10);
                       }}
                       placeholder="Enter city or address"
                       className="pr-8"
-                      autoFocus
                       tabIndex={0}
                     />
             {cityAddress && !isLoadingSuggestions && (

@@ -8,6 +8,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useLoginUrl } from '@/components/useLoginUrl';
 import LocationFilter from '@/components/LocationFilter';
 import { filterMarkersByRadius, createRadiusCircle } from '@/lib/locationUtils';
+import BuyNowModal from '../components/BuyNowModal';
 
 export default function UshahidiMapPage() {
   const mapRef = useRef<L.Map | null>(null);
@@ -17,6 +18,10 @@ export default function UshahidiMapPage() {
 
   // Loading state for initial page load
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  // Buy Now modal state
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<string>('');
   
   // Debug loading state
   console.log('Initial loading state:', isInitialLoading);
@@ -277,6 +282,21 @@ export default function UshahidiMapPage() {
     }
   }, [applyMarkerFilter]);
 
+  // Handle Buy Now button click
+  const handleBuyNowClick = useCallback((itemTitle: string) => {
+    setSelectedItem(itemTitle);
+    setShowBuyNowModal(true);
+  }, []);
+
+  // Set up global function for popup buttons
+  useEffect(() => {
+    (window as any).handleBuyNow = handleBuyNowClick;
+    
+    return () => {
+      delete (window as any).handleBuyNow;
+    };
+  }, [handleBuyNowClick]);
+
   // Handle name search
   const handleNameSearch = useCallback((searchTerm: string) => {
     if (!searchTerm.trim()) {
@@ -455,7 +475,10 @@ export default function UshahidiMapPage() {
         
         // Handle GeoJSON FeatureCollection format
         if (data.type === 'FeatureCollection' && Array.isArray(data.features)) {
-          data.features.forEach((feature: any) => {
+          let markersAdded = 0;
+          console.log(`Processing ${data.features.length} GeoJSON features...`);
+          
+          data.features.forEach((feature: any, index: number) => {
             if (feature.geometry && feature.geometry.type === 'GeometryCollection' && 
                 Array.isArray(feature.geometry.geometries)) {
               
@@ -469,9 +492,16 @@ export default function UshahidiMapPage() {
                 if (lat && lon && clusterRef.current) {
                   const marker = L.marker([lat, lon], { icon: defaultIcon })
                     .bindPopup(
-                      `<b>${feature.properties?.title || 'No Title'}</b><br>${
-                        feature.properties?.description || ''
-                      }`
+                      `<div class="popup-content">
+                        <b>${feature.properties?.title || 'No Title'}</b><br>
+                        ${feature.properties?.description || ''}
+                        <br><br>
+                        <button onclick="handleBuyNow('${feature.properties?.title || 'No Title'}')" 
+                                class="buy-now-btn" 
+                                style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                          Buy Now
+                        </button>
+                      </div>`
                     );
                   
                   // Store marker for filtering
@@ -483,16 +513,31 @@ export default function UshahidiMapPage() {
                   });
                   
                   markerClusterGroup.addLayer(marker);
+                  markersAdded++;
+                  
+                  // Log every 10th marker for debugging
+                  if (markersAdded % 10 === 0) {
+                    console.log(`Added ${markersAdded} GeoJSON markers so far...`);
+                  }
+                } else {
+                  console.log(`Invalid coordinates for feature ${index}:`, { lat, lon });
                 }
+              } else {
+                console.log(`No valid point geometry for feature ${index}`);
               }
+            } else {
+              console.log(`Invalid geometry for feature ${index}:`, feature.geometry);
             }
           });
+          
+          console.log(`Added ${markersAdded} markers from GeoJSON format`);
         } 
         // Fallback for old format (if needed)
         else {
           const posts = Array.isArray(data.results) ? data.results : [];
+          let markersAdded = 0;
 
-          posts.forEach((post: any) => {
+          posts.forEach((post: any, index: number) => {
             const locationArray =
               post.values?.['9408c2c5-f11e-447d-b4f9-477d09ab1d0a'];
             if (Array.isArray(locationArray) && locationArray.length > 0) {
@@ -500,9 +545,16 @@ export default function UshahidiMapPage() {
             if (lat && lon && clusterRef.current) {
               const marker = L.marker([lat, lon], { icon: defaultIcon })
                 .bindPopup(
-                  `<b>${post.title || 'No Title'}</b><br>${
-                    post.content || ''
-                  }`
+                  `<div class="popup-content">
+                    <b>${post.title || 'No Title'}</b><br>
+                    ${post.content || ''}
+                    <br><br>
+                    <button onclick="handleBuyNow('${post.title || 'No Title'}')" 
+                            class="buy-now-btn" 
+                            style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                      Buy Now
+                    </button>
+                  </div>`
                 );
               
               // Store marker for filtering
@@ -514,17 +566,62 @@ export default function UshahidiMapPage() {
               });
               
               markerClusterGroup.addLayer(marker);
+              markersAdded++;
+              
+              // Log every 10th marker for debugging
+              if (markersAdded % 10 === 0) {
+                console.log(`Added ${markersAdded} markers so far...`);
+              }
+            } else {
+              console.log(`Invalid coordinates for post ${index}:`, { lat, lon });
             }
+            } else {
+              console.log(`No location data for post ${index}:`, post);
             }
           });
+          
+          console.log(`Added ${markersAdded} markers from old format`);
         }
         
-        // Hide initial loading state after markers are loaded with a small delay
-        // to ensure markers are fully rendered
-        setTimeout(() => {
-          console.log('Hiding initial loading overlay');
-          setIsInitialLoading(false);
-        }, 500);
+        // Hide initial loading state after markers are loaded and rendered
+        // Wait for cluster to be fully rendered before hiding loader
+        if (clusterRef.current && allMarkersRef.current.length > 0) {
+          console.log('Markers found, waiting for rendering...');
+          
+          // Use multiple requestAnimationFrame calls to ensure markers are fully rendered
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              // Additional check to ensure cluster has visible markers
+              setTimeout(() => {
+                // Check if cluster actually has visible layers
+                const clusterLayers = clusterRef.current?.getLayers();
+                const visibleLayers = clusterLayers?.length || 0;
+                
+                console.log('Cluster layers count:', visibleLayers);
+                console.log('Total markers in ref:', allMarkersRef.current.length);
+                
+                if (visibleLayers > 0) {
+                  console.log('Hiding initial loading overlay - markers loaded and rendered:', allMarkersRef.current.length);
+                  setIsInitialLoading(false);
+                } else {
+                  console.log('No visible layers in cluster, keeping loader active');
+                  // Keep loader active for a bit longer
+                  setTimeout(() => {
+                    console.log('Force hiding loader after extended wait');
+                    setIsInitialLoading(false);
+                  }, 2000);
+                }
+              }, 1000); // Increased delay to ensure markers are visible
+            });
+          });
+        } else {
+          // No markers loaded, hide loader after a short delay
+          console.log('No markers found in data');
+          setTimeout(() => {
+            console.log('Hiding initial loading overlay - no markers found');
+            setIsInitialLoading(false);
+          }, 1000); // Increased delay for no markers case
+        }
       })
       .catch(err => {
         console.error('Failed to load posts:', err);
@@ -533,7 +630,7 @@ export default function UshahidiMapPage() {
         setTimeout(() => {
           console.log('Hiding initial loading overlay (error case)');
           setIsInitialLoading(false);
-        }, 500);
+        }, 1000); // Longer delay for error case
       });
 
     // Cleanup function
@@ -561,11 +658,21 @@ export default function UshahidiMapPage() {
       
       {/* Initial Loading Overlay */}
       {isInitialLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-40">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <div className="text-lg font-medium text-gray-700">Loading map data...</div>
-            <div className="text-sm text-gray-500">Please wait while we load all pins</div>
+        <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50 rounded-md">
+          <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-lg shadow-lg border">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent absolute top-0 left-0"></div>
+            </div>
+            <div className="text-xl font-semibold text-gray-800">Loading Map Data</div>
+            <div className="text-sm text-gray-600 text-center max-w-xs">
+              Please wait while we load all location points...
+            </div>
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            </div>
           </div>
         </div>
       )}
@@ -576,6 +683,13 @@ export default function UshahidiMapPage() {
         onCombinedSearch={handleCombinedSearch}
         onClear={handleClearFilter}
         className="absolute top-4 right-4 z-50"
+      />
+      
+      {/* Buy Now Modal */}
+      <BuyNowModal
+        open={showBuyNowModal}
+        onOpenChange={setShowBuyNowModal}
+        itemTitle={selectedItem}
       />
     </div>
   );

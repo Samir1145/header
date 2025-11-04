@@ -7,6 +7,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { useLoginUrl } from '@/components/useLoginUrl';
 import LocationFilter from '@/components/LocationFilter';
 import { filterMarkersByRadius, createRadiusCircle } from '@/lib/locationUtils';
+import BuyNowModal from '../components/BuyNowModal';
 
 export default function UshahidiMapPage3() {
   const mapRef = useRef<L.Map | null>(null);
@@ -16,6 +17,10 @@ export default function UshahidiMapPage3() {
 
   // Loading state for initial page load
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  // Buy Now modal state
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<string>('');
   
   // Debug loading state
   console.log('Initial loading state:', isInitialLoading);
@@ -87,6 +92,21 @@ export default function UshahidiMapPage3() {
     // Apply marker filter
     applyMarkerFilter(center, radius);
   }, [applyMarkerFilter]);
+
+  // Handle Buy Now button click
+  const handleBuyNowClick = useCallback((itemTitle: string) => {
+    setSelectedItem(itemTitle);
+    setShowBuyNowModal(true);
+  }, []);
+
+  // Set up global function for popup buttons
+  useEffect(() => {
+    (window as any).handleBuyNow = handleBuyNowClick;
+    
+    return () => {
+      delete (window as any).handleBuyNow;
+    };
+  }, [handleBuyNowClick]);
 
   // Handle name search
   const handleNameSearch = useCallback((searchTerm: string) => {
@@ -381,7 +401,8 @@ export default function UshahidiMapPage3() {
           }
 
           // Process markers
-          data.data.forEach((item: any) => {
+          let markersAdded = 0;
+          data.data.forEach((item: any, index: number) => {
             if (item.geometry && item.geometry.type === 'Point' && item.geometry.coordinates) {
               const [lng, lat] = item.geometry.coordinates;
               
@@ -389,10 +410,16 @@ export default function UshahidiMapPage3() {
                   lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                 
                 const marker = L.marker([lat, lng]).bindPopup(`
-                  <div>
+                  <div class="popup-content">
                     <h3>${item.properties?.title || 'Untitled'}</h3>
                     <p>${item.properties?.description || 'No description'}</p>
                     ${item.properties?.url ? `<a href="${item.properties.url}" target="_blank">View Details</a>` : ''}
+                    <br><br>
+                    <button onclick="handleBuyNow('${item.properties?.title || 'Untitled'}')" 
+                            class="buy-now-btn" 
+                            style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                      Buy Now
+                    </button>
                   </div>
                 `);
 
@@ -404,19 +431,62 @@ export default function UshahidiMapPage3() {
                 });
 
                 clusterRef.current.addLayer(marker);
+                markersAdded++;
+                
+                // Log every 10th marker for debugging
+                if (markersAdded % 10 === 0) {
+                  console.log(`Added ${markersAdded} markers so far...`);
+                }
+              } else {
+                console.log(`Invalid coordinates for item ${index}:`, { lat, lng });
               }
+            } else {
+              console.log(`Invalid geometry for item ${index}:`, item.geometry);
             }
           });
 
           console.log(`Added ${allMarkersRef.current.length} markers to map`);
         }
 
-        // Hide initial loading state after markers are loaded with a small delay
-        // to ensure markers are fully rendered
-        setTimeout(() => {
-          console.log('Hiding initial loading overlay');
-          setIsInitialLoading(false);
-        }, 500);
+        // Hide initial loading state after markers are loaded and rendered
+        // Wait for cluster to be fully rendered before hiding loader
+        if (clusterRef.current && allMarkersRef.current.length > 0) {
+          console.log('Markers found, waiting for rendering...');
+          
+          // Use multiple requestAnimationFrame calls to ensure markers are fully rendered
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              // Additional check to ensure cluster has visible markers
+              setTimeout(() => {
+                // Check if cluster actually has visible layers
+                const clusterLayers = clusterRef.current?.getLayers();
+                const visibleLayers = clusterLayers?.length || 0;
+                
+                console.log('Cluster layers count:', visibleLayers);
+                console.log('Total markers in ref:', allMarkersRef.current.length);
+                
+                if (visibleLayers > 0) {
+                  console.log('Hiding initial loading overlay - markers loaded and rendered:', allMarkersRef.current.length);
+                  setIsInitialLoading(false);
+                } else {
+                  console.log('No visible layers in cluster, keeping loader active');
+                  // Keep loader active for a bit longer
+                  setTimeout(() => {
+                    console.log('Force hiding loader after extended wait');
+                    setIsInitialLoading(false);
+                  }, 2000);
+                }
+              }, 1000); // Increased delay to ensure markers are visible
+            });
+          });
+        } else {
+          // No markers loaded, hide loader after a short delay
+          console.log('No markers found in data');
+          setTimeout(() => {
+            console.log('Hiding initial loading overlay - no markers found');
+            setIsInitialLoading(false);
+          }, 1000); // Increased delay for no markers case
+        }
 
       } catch (error) {
         console.error('Failed to load posts:', error);
@@ -425,7 +495,7 @@ export default function UshahidiMapPage3() {
         setTimeout(() => {
           console.log('Hiding initial loading overlay (error case)');
           setIsInitialLoading(false);
-        }, 500);
+        }, 1000); // Longer delay for error case
       }
     };
 
@@ -436,11 +506,21 @@ export default function UshahidiMapPage3() {
     <div className="w-full h-screen relative">
       {/* Initial loading overlay */}
       {isInitialLoading && (
-        <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-40">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <div className="text-lg font-medium text-gray-700">Loading map data...</div>
-            <div className="text-sm text-gray-500">Please wait while we load all pins</div>
+        <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-lg shadow-lg border">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200"></div>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent absolute top-0 left-0"></div>
+            </div>
+            <div className="text-xl font-semibold text-gray-800">Loading Map Data</div>
+            <div className="text-sm text-gray-600 text-center max-w-xs">
+              Please wait while we load all location points...
+            </div>
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            </div>
           </div>
         </div>
       )}
@@ -456,6 +536,13 @@ export default function UshahidiMapPage3() {
 
       {/* Map Container */}
       <div id="map3" className="w-full h-full"></div>
+      
+      {/* Buy Now Modal */}
+      <BuyNowModal
+        open={showBuyNowModal}
+        onOpenChange={setShowBuyNowModal}
+        itemTitle={selectedItem}
+      />
     </div>
   );
 }

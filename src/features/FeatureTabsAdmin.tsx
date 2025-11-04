@@ -483,6 +483,7 @@ const AdminTabSettings: React.FC = () => {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const savedData = docSnap.data();
+          
           // Handle both predefined tabs and dynamically added menus
           const mergedState: Record<string, TabAccess> = {};
           
@@ -507,7 +508,7 @@ const AdminTabSettings: React.FC = () => {
           
           // Then, add any dynamically added menus
           Object.keys(savedData).forEach(key => {
-            if (!TABS.find(tab => tab.key === key) && key !== 'siteSettings') {
+            if (!TABS.find(tab => tab.key === key) && key !== 'siteSettings' && key !== 'resourceTypes') {
               const savedTab = savedData[key];
               mergedState[key] = {
                 public: savedTab.public || false,
@@ -580,8 +581,8 @@ const AdminTabSettings: React.FC = () => {
     setTabState((prev) => ({
       ...prev,
       [newKey]: {
-        public: false,
-        admin: false,
+        public: true, // Make new menus visible by default
+        admin: true,   // Make new menus visible by default
         customHeading: "",
         order: newOrder,
         path: "",
@@ -656,6 +657,7 @@ const handleSave = async () => {
         }];
       })
     );
+
 
     await setDoc(doc(db, 'admin_feature_tabs', 'access_config_new'), {
       ...normalizedState,

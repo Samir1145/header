@@ -16,9 +16,11 @@ import { SiteInfo } from '@/lib/constants'
 interface LoginModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onLoginSuccess?: () => void;
+    onShowRegister?: () => void;
 }
 
-export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
+export default function LoginModal({ open, onOpenChange, onLoginSuccess, onShowRegister }: LoginModalProps) {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { login } = useAuthStore();
@@ -48,7 +50,13 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
             toast.success(t('login.successMessage') || 'Login successful!');
 
             onOpenChange(false);
-            navigate('/');
+            
+            // Call success callback if provided
+            if (onLoginSuccess) {
+                onLoginSuccess();
+            } else {
+                navigate('/');
+            }
         } catch (error: any) {
             console.error('Login error:', error);
             let msg = t('login.errorInvalidCredentials') || 'Invalid credentials';
@@ -129,7 +137,7 @@ export default function LoginModal({ open, onOpenChange }: LoginModalProps) {
 
 
                     <p className='text-right pt-1'>Don't have Account?
-                        <button className="text-green-600" onClick={() => setShowRegisterModal(true)} >Register Now</button></p>
+                        <button className="text-green-600" onClick={() => onShowRegister ? onShowRegister() : setShowRegisterModal(true)} >Register Now</button></p>
                     <p className="text-sm mt-2 text-right">
                         <button onClick={() => setShowForgotModal(true)} className="text-blue-500 hover:underline">
                             Forgot Password?

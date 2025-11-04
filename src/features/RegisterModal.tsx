@@ -18,21 +18,43 @@ import { SiteInfo } from '@/lib/constants'
 interface Props {
     open: boolean
     onOpenChange: (open: boolean) => void
+    onRegisterSuccess?: () => void
+    onShowLogin?: () => void
 }
 
-const RegisterModal = ({ open, onOpenChange }: Props) => {
+const RegisterModal = ({ open, onOpenChange, onRegisterSuccess, onShowLogin }: Props) => {
     const { t } = useTranslation()
     const { login } = useAuthStore()
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
+    const [fullName, setFullName] = useState('')
+    const [phoneNumber, setPhoneNumber] = useState('')
     const [loading, setLoading] = useState(false)
 
     const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
 
-        if (!email || !password) {
-            toast.error(t('login.errorEmptyFields', 'Please enter email and password'))
+        if (!email || !password || !fullName || !phoneNumber || !confirmPassword) {
+            toast.error(t('login.errorEmptyFields', 'Please fill in all fields'))
+            return
+        }
+
+        if (password !== confirmPassword) {
+            toast.error('Passwords do not match')
+            return
+        }
+
+        if (password.length < 6) {
+            toast.error('Password must be at least 6 characters long')
+            return
+        }
+
+        // Basic phone number validation
+        const phoneRegex = /^[0-9]{10}$/
+        if (!phoneRegex.test(phoneNumber)) {
+            toast.error('Please enter a valid 10-digit phone number')
             return
         }
 
@@ -44,6 +66,8 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
             // Save user to Firestore
             await setDoc(doc(db, 'users', user.uid), {
                 email: user.email,
+                fullName: fullName,
+                phoneNumber: phoneNumber,
                 role: 'user',
                 plan: 'free',
                 createdAt: Timestamp.now(),
@@ -56,6 +80,11 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
 
             toast.success(t('login.successMessage', 'Registration successful!'))
             onOpenChange(false)
+            
+            // Call success callback if provided
+            if (onRegisterSuccess) {
+                onRegisterSuccess()
+            }
         } catch (error: any) {
             console.error('Registration error:', error)
 
@@ -93,9 +122,22 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
                     </div>
                 </div>
 
-                <form onSubmit={handleRegister} className="space-y-5 mt-4">
+                <form onSubmit={handleRegister} className="space-y-4 mt-4">
                     <div className="flex items-center gap-4">
-                        <label htmlFor="username-input" className="text-sm font-medium w-16 shrink-0">
+                        <label htmlFor="fullname-input" className="text-sm font-medium w-20 shrink-0">
+                            Full Name
+                        </label>
+                        <Input
+                            type="text"
+                            placeholder="Enter your full name"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            required
+                            className="h-11 flex-1"
+                        />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <label htmlFor="email-input" className="text-sm font-medium w-20 shrink-0">
                             {t('login.email', 'Email')}
                         </label>
                         <Input
@@ -104,11 +146,24 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                                className="h-11 flex-1"
+                            className="h-11 flex-1"
                         />
                     </div>
                     <div className="flex items-center gap-4">
-                        <label htmlFor="password-input" className="text-sm font-medium w-16 shrink-0">
+                        <label htmlFor="phone-input" className="text-sm font-medium w-20 shrink-0">
+                            Phone
+                        </label>
+                        <Input
+                            type="tel"
+                            placeholder="Enter your phone number"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value)}
+                            required
+                            className="h-11 flex-1"
+                        />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <label htmlFor="password-input" className="text-sm font-medium w-20 shrink-0">
                             {t('login.password')}
                         </label>
                         <Input
@@ -117,7 +172,20 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                                className="h-11 flex-1"
+                            className="h-11 flex-1"
+                        />
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <label htmlFor="confirm-password-input" className="text-sm font-medium w-20 shrink-0">
+                            Confirm
+                        </label>
+                        <Input
+                            type="password"
+                            placeholder="Confirm your password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            required
+                            className="h-11 flex-1"
                         />
                     </div>
                     <div className="flex justify-end space-x-2">
@@ -131,6 +199,12 @@ const RegisterModal = ({ open, onOpenChange }: Props) => {
                         </Button>
                     </div>
                 </form>
+                
+                <p className='text-right pt-1'>Already have an account?
+                    <button className="text-green-600 ml-1" onClick={() => onShowLogin ? onShowLogin() : onOpenChange(false)}>
+                        Login Now
+                    </button>
+                </p>
             </DialogContent>
         </Dialog>
     )
