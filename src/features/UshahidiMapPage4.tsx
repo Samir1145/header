@@ -70,8 +70,12 @@ export default function UshahidiMapPage4() {
 
     if (center && radius > 0) {
       // Create new radius circle
-      radiusCircleRef.current = createRadiusCircle(center, radius);
-      mapRef.current.addLayer(radiusCircleRef.current);
+      if (mapRef.current) {
+        radiusCircleRef.current = createRadiusCircle(mapRef.current, center, radius);
+        if (radiusCircleRef.current) {
+          mapRef.current.addLayer(radiusCircleRef.current);
+        }
+      }
 
       // Determine zoom level based on radius
       let zoomLevel = 10;
@@ -230,8 +234,12 @@ export default function UshahidiMapPage4() {
       }
 
       // Create new radius circle
-      radiusCircleRef.current = createRadiusCircle(locationCenter, radius);
-      mapRef.current?.addLayer(radiusCircleRef.current);
+      if (mapRef.current) {
+        radiusCircleRef.current = createRadiusCircle(mapRef.current, locationCenter, radius);
+        if (radiusCircleRef.current) {
+          mapRef.current.addLayer(radiusCircleRef.current);
+        }
+      }
 
       // Determine zoom level based on radius
       let zoomLevel = 10;
@@ -295,8 +303,12 @@ export default function UshahidiMapPage4() {
       }
 
       // Create new radius circle
-      radiusCircleRef.current = createRadiusCircle(locationCenter, radius);
-      mapRef.current?.addLayer(radiusCircleRef.current);
+      if (mapRef.current) {
+        radiusCircleRef.current = createRadiusCircle(mapRef.current, locationCenter, radius);
+        if (radiusCircleRef.current) {
+          mapRef.current.addLayer(radiusCircleRef.current);
+        }
+      }
 
       // Determine zoom level based on radius
       let zoomLevel = 10;
@@ -347,7 +359,33 @@ export default function UshahidiMapPage4() {
     applyMarkerFilter(null, 0);
   }, [applyMarkerFilter]);
 
+  // Handle Buy Now button click
+  const handleBuyNowClick = useCallback((itemTitle: string) => {
+    setSelectedItem(itemTitle);
+    setShowBuyNowModal(true);
+  }, []);
+
+  // Set up global function for popup buttons
   useEffect(() => {
+    (window as any).handleBuyNow = handleBuyNowClick;
+    
+    return () => {
+      delete (window as any).handleBuyNow;
+    };
+  }, [handleBuyNowClick]);
+
+  useEffect(() => {
+    // Use custom marker icon
+    const defaultIcon = new L.Icon({
+      iconUrl: 'leaflet/marker-icon.png',
+      iconRetinaUrl: 'leaflet/marker-icon-2x.png',
+      shadowUrl: 'leaflet/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+
     if (!mapRef.current) {
       // Initialize map
       mapRef.current = L.map('map4').setView([20, 78], 5);
@@ -393,11 +431,17 @@ export default function UshahidiMapPage4() {
               if (typeof lat === 'number' && typeof lng === 'number' && 
                   lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                 
-                const marker = L.marker([lat, lng]).bindPopup(`
-                  <div>
+                const marker = L.marker([lat, lng], { icon: defaultIcon }).bindPopup(`
+                  <div class="popup-content">
                     <h3>${item.properties?.title || 'Untitled'}</h3>
                     <p>${item.properties?.description || 'No description'}</p>
                     ${item.properties?.url ? `<a href="${item.properties.url}" target="_blank">View Details</a>` : ''}
+                    <br><br>
+                    <button onclick="handleBuyNow('${item.properties?.title || 'Untitled'}')" 
+                            class="buy-now-btn" 
+                            style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                      Buy Now
+                    </button>
                   </div>
                 `);
 
@@ -504,6 +548,13 @@ export default function UshahidiMapPage4() {
 
       {/* Map Container */}
       <div id="map4" className="w-full h-full"></div>
+      
+      {/* Buy Now Modal */}
+      <BuyNowModal
+        open={showBuyNowModal}
+        onOpenChange={setShowBuyNowModal}
+        itemTitle={selectedItem}
+      />
     </div>
   );
 }

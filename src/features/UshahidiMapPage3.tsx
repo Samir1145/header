@@ -70,8 +70,12 @@ export default function UshahidiMapPage3() {
 
     if (center && radius > 0) {
       // Create new radius circle
-      radiusCircleRef.current = createRadiusCircle(center, radius);
-      mapRef.current.addLayer(radiusCircleRef.current);
+      if (mapRef.current) {
+        radiusCircleRef.current = createRadiusCircle(mapRef.current, center, radius);
+        if (radiusCircleRef.current) {
+          mapRef.current.addLayer(radiusCircleRef.current);
+        }
+      }
 
       // Determine zoom level based on radius
       let zoomLevel = 10;
@@ -245,8 +249,12 @@ export default function UshahidiMapPage3() {
       }
 
       // Create new radius circle
-      radiusCircleRef.current = createRadiusCircle(locationCenter, radius);
-      mapRef.current?.addLayer(radiusCircleRef.current);
+      if (mapRef.current) {
+        radiusCircleRef.current = createRadiusCircle(mapRef.current, locationCenter, radius);
+        if (radiusCircleRef.current) {
+          mapRef.current.addLayer(radiusCircleRef.current);
+        }
+      }
 
       // Determine zoom level based on radius
       let zoomLevel = 10;
@@ -310,8 +318,12 @@ export default function UshahidiMapPage3() {
       }
 
       // Create new radius circle
-      radiusCircleRef.current = createRadiusCircle(locationCenter, radius);
-      mapRef.current?.addLayer(radiusCircleRef.current);
+      if (mapRef.current) {
+        radiusCircleRef.current = createRadiusCircle(mapRef.current, locationCenter, radius);
+        if (radiusCircleRef.current) {
+          mapRef.current.addLayer(radiusCircleRef.current);
+        }
+      }
 
       // Determine zoom level based on radius
       let zoomLevel = 10;
@@ -363,6 +375,17 @@ export default function UshahidiMapPage3() {
   }, [applyMarkerFilter]);
 
   useEffect(() => {
+    // Use custom marker icon
+    const defaultIcon = new L.Icon({
+      iconUrl: 'leaflet/marker-icon.png',
+      iconRetinaUrl: 'leaflet/marker-icon-2x.png',
+      shadowUrl: 'leaflet/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+
     if (!mapRef.current) {
       // Initialize map
       mapRef.current = L.map('map3').setView([20, 78], 5);
@@ -409,7 +432,7 @@ export default function UshahidiMapPage3() {
               if (typeof lat === 'number' && typeof lng === 'number' && 
                   lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                 
-                const marker = L.marker([lat, lng]).bindPopup(`
+                const marker = L.marker([lat, lng], { icon: defaultIcon }).bindPopup(`
                   <div class="popup-content">
                     <h3>${item.properties?.title || 'Untitled'}</h3>
                     <p>${item.properties?.description || 'No description'}</p>
