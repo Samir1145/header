@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/state';
 import { useSettingsStore } from '@/stores/settings';
 import { cn } from '@/lib/utils';
 import { navigationService } from '@/services/navigation';
-import { ZapIcon, LogOutIcon } from 'lucide-react';
+import { LogOutIcon } from 'lucide-react';
 import {
   Tooltip,
   TooltipProvider,
@@ -290,7 +290,7 @@ const findActiveTab = () => {
         {/* Left side - Logo + Branding */}
         <div className="flex items-center min-w-[200px]">
           <NavLink to={guestMode ? "/" : "/access"} className="flex items-center gap-2">
-            <ZapIcon className="h-4 w-4 text-emerald-400" />
+            <img src="apnet_logo.jpeg" alt="Logo" className="h-8 w-auto" />
             <span className="font-bold">{siteInfo.siteTitle || SiteInfo.name}</span>
           </NavLink>
           {siteInfo.siteHeader && (
