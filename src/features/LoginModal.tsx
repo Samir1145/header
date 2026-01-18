@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent } from '@/components/ui/Dialog';
 import { useAuthStore } from '@/stores/state';
 import { toast } from 'sonner';
-import { firebaseLogin, getUserMetadata } from '@/api/firebaseAuth';
+import { sqliteLogin } from '@/api/sqliteAuth';
 import { useTranslation } from 'react-i18next';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -42,15 +42,28 @@ export default function LoginModal({ open, onOpenChange, onLoginSuccess, onShowR
 
         try {
             setLoading(true);
-            const result = await firebaseLogin(email, password);
-            const token = await result.user.getIdToken();
-            const metadata = await getUserMetadata(result.user.uid);
 
-            login(token, 'firebase', 'v1', null, null, metadata.role, metadata.plan);
+            // Use SQLite auth
+            const result = await sqliteLogin(email, password);
+
+            // Store the token
+            localStorage.setItem('LIGHTRAG-API-TOKEN', result.token);
+
+            // Update auth store
+            login(
+                result.token,
+                'sqlite',
+                'v1',
+                null,
+                null,
+                result.user.role,
+                result.user.plan
+            );
+
             toast.success(t('login.successMessage') || 'Login successful!');
 
             onOpenChange(false);
-            
+
             // Call success callback if provided
             if (onLoginSuccess) {
                 onLoginSuccess();
@@ -59,26 +72,7 @@ export default function LoginModal({ open, onOpenChange, onLoginSuccess, onShowR
             }
         } catch (error: any) {
             console.error('Login error:', error);
-            let msg = t('login.errorInvalidCredentials') || 'Invalid credentials';
-
-            switch (error.code) {
-                case 'auth/user-not-found':
-                    msg = 'No user found with this email.';
-                    break;
-                case 'auth/wrong-password':
-                    msg = 'Incorrect password.';
-                    break;
-                case 'auth/invalid-email':
-                    msg = 'Invalid email format.';
-                    break;
-                case 'auth/invalid-credential':
-                    msg = 'Invalid login credentials.';
-                    break;
-                default:
-                    msg = error.message || msg;
-            }
-
-            toast.error(msg);
+            toast.error(error.message || 'Invalid credentials');
         } finally {
             setLoading(false);
         }

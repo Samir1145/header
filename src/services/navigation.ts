@@ -1,10 +1,8 @@
 import { NavigateFunction } from 'react-router-dom';
-import { useAuthStore, useBackendState } from '@/stores/state';
+import { useBackendState } from '@/stores/state';
 import { useGraphStore } from '@/stores/graph';
 import { useSettingsStore } from '@/stores/settings';
-
-import { getAuth } from 'firebase/auth';
-import { firebaseLogout } from '@/api/firebaseAuth';
+import { sqliteLogout } from '@/api/sqliteAuth';
 
 class NavigationService {
   private navigate: NavigateFunction | null = null;
@@ -62,18 +60,25 @@ class NavigationService {
       return;
     }
 
-    // Store previous user (if logged in)
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-    if (currentUser?.email) {
-      localStorage.setItem('LIGHTRAG-PREVIOUS-USER', currentUser.email);
+    // Store previous user email if available
+    const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
+    if (token) {
+      try {
+        // Try to extract email from JWT payload
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.email) {
+          localStorage.setItem('LIGHTRAG-PREVIOUS-USER', payload.email);
+        }
+      } catch (e) {
+        // Ignore JWT parsing errors
+      }
     }
 
     // Reset application state but preserve chat history
     this.resetAllApplicationState(true);
 
-    // Logout from Firebase
-    await firebaseLogout();
+    // Logout from SQLite backend
+    await sqliteLogout();
 
     // Navigate to login
     this.navigate('/retrieval');

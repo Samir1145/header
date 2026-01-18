@@ -13,10 +13,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/Tooltip';
-import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { firebaseLogout } from '@/api/firebaseAuth';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { getNavigationTabs, getSiteSettings, TabConfig } from '@/api/sqliteApi';
+import { sqliteLogout } from '@/api/sqliteAuth';
 import { useNavigationTabsStore } from '@/stores/navigationTabs';
 import LoginModal from '@/features/LoginModal';
 
@@ -31,63 +30,31 @@ interface NavigationTab {
   value: string;
   path: string;
   loginUrl: string;
-  subtabs: SubTab[]; 
+  subtabs: SubTab[];
   order: number;
-  directPath?: string; // For single-row menu direct navigation
-}
-
-interface FirebaseTabConfig {
-  [key: string]: {
-    public?: boolean;
-    stakeholders?: boolean;
-    team?: boolean;
-    admin?: boolean;
-    customHeading?: string;
-    order?: number;
-    loginUrl?: string;
-    
-    subtabs?: SubTab[];
-    
-    ipAddress1?: string;
-    ipAddress2?: string;
-    ipAddress3?: string;
-    ipAddress4?: string;
-    ipAddress5?: string;
-    subtitle1?: string;
-    subtitle2?: string;
-    subtitle3?: string;
-    subtitle4?: string;
-    subtitle5?: string;
-    url1?: string;
-    url2?: string;
-    url3?: string;
-    url4?: string;
-    url5?: string;
-  };
+  directPath?: string;
 }
 
 function NavigationMenu({ tabs }: { tabs: NavigationTab[]; role?: string | null }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleTabNavigation = (tab: NavigationTab) => {
+  const handleTabNavigation = useCallback((tab: NavigationTab) => {
     const validSubtabs = tab.subtabs.filter(subtab => subtab.title && subtab.path);
-    
+
     if (validSubtabs.length > 0) {
       navigate(validSubtabs[0].path);
     } else {
       navigate(tab.path);
     }
-  };
+  }, [navigate]);
 
-const isTabActive = (tab: NavigationTab) => {
-  // Active only if one of the subtabs matches
-  return tab.subtabs.some(subtab =>
-    location.pathname === subtab.path ||
-    location.pathname.startsWith(subtab.path + '/')
-  );
-};
-
+  const isTabActive = useCallback((tab: NavigationTab) => {
+    return tab.subtabs.some(subtab =>
+      location.pathname === subtab.path ||
+      location.pathname.startsWith(subtab.path + '/')
+    );
+  }, [location.pathname]);
 
   return (
     <div className="flex items-center gap-2">
@@ -126,8 +93,8 @@ function SubNavigationMenu({ activeTab }: { activeTab?: NavigationTab | null }) 
     <div className="border-b bg-background sticky top-[55px] z-40">
       <div className="flex justify-center items-center gap-6">
         {validSubtabs.map((subtab, index) => {
-          const isActive = location.pathname === subtab.path || 
-                          location.pathname.startsWith(subtab.path + '/');
+          const isActive = location.pathname === subtab.path ||
+            location.pathname.startsWith(subtab.path + '/');
 
           return (
             <NavLink
@@ -152,137 +119,143 @@ function SubNavigationMenu({ activeTab }: { activeTab?: NavigationTab | null }) 
   );
 }
 
+// Transform API config to NavigationTab format
+function transformTabConfig(config: TabConfig, guestMode: boolean): NavigationTab[] {
+  const fetchedTabs: NavigationTab[] = [];
+
+  for (const [key, val] of Object.entries(config)) {
+    if (!val || typeof val !== 'object' || key === 'siteSettings' || key === 'resourceTypes') continue;
+
+    const isDynamicMenu = key.startsWith('menu_');
+    const hasContent = val.customHeading || (val.subtabs && val.subtabs.some((sub: any) => sub.title || sub.path));
+
+    if (guestMode && !val.public && !(isDynamicMenu && hasContent)) continue;
+    if (!guestMode && !(val.public || val.stakeholders || val.team || val.admin) && !(isDynamicMenu && hasContent)) continue;
+
+    const label = val.customHeading || key;
+
+    let path = val.ipAddress1 || `/${key}`;
+    if (!path.startsWith('/')) path = `/${path}`;
+    path = path.replace(/\/+/g, '/');
+
+    let subtabs: SubTab[] = [];
+
+    if (val.subtabs && Array.isArray(val.subtabs)) {
+      subtabs = val.subtabs.filter(subtab =>
+        subtab && subtab.title && subtab.path
+      );
+    } else {
+      const legacySubtabs = [];
+      for (let i = 1; i <= 5; i++) {
+        const title = val[`subtitle${i}` as keyof typeof val] as string;
+        const url = val[`url${i}` as keyof typeof val] as string;
+
+        if (title && url) {
+          legacySubtabs.push({
+            title,
+            path: url,
+            loginUrl: key
+          });
+        }
+      }
+      subtabs = legacySubtabs;
+    }
+
+    fetchedTabs.push({
+      label,
+      value: key,
+      path,
+      order: val.order ?? 999,
+      loginUrl: val.loginUrl || key,
+      subtabs,
+      directPath: (val as any).path
+    });
+  }
+
+  return fetchedTabs.sort((a, b) => a.order - b.order);
+}
+
 export default function SiteHeader({ guestMode = false }: { guestMode?: boolean }) {
   const { role, plan } = useAuthStore();
   const { menuStyle } = useSettingsStore();
   const [showLogin, setShowLogin] = useState(false);
   const [tabs, setTabs] = useState<NavigationTab[]>([]);
-  const [activeTab, setActiveTab] = useState<NavigationTab | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
   const [siteInfo, setSiteInfo] = useState<{ siteTitle: string; siteHeader: string }>({
     siteTitle: "",
     siteHeader: "",
   });
 
+  // Fetch tabs from SQLite API with caching
   useEffect(() => {
-    const fetchTabs = async () => {
+    let isMounted = true;
+
+    const fetchData = async () => {
       try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config_new');
-        const docSnap = await getDoc(docRef);
+        setIsLoading(true);
 
-        if (docSnap.exists()) {
-          const config = docSnap.data() as FirebaseTabConfig;
-          const data = docSnap.data();
-          const fetchedTabs: NavigationTab[] = [];
-          
-          if (data.siteSettings) {
-            setSiteInfo({
-              siteTitle: data.siteSettings.siteTitle || "",
-              siteHeader: data.siteSettings.siteHeader || "",
-            });
-          }
+        // Fetch tabs and site settings in parallel
+        const [tabConfig, settings] = await Promise.all([
+          getNavigationTabs(),
+          getSiteSettings()
+        ]);
 
-          for (const [key, val] of Object.entries(config)) {
-            if (!val || typeof val !== 'object' || key === 'siteSettings' || key === 'resourceTypes') continue;
+        if (!isMounted) return;
 
-            // For dynamically created menus (like menu_7), show them if they have any content
-            // even if visibility flags are not set, to prevent them from disappearing
-            const isDynamicMenu = key.startsWith('menu_');
-            const hasContent = val.customHeading || (val.subtabs && val.subtabs.some((sub: any) => sub.title || sub.path));
-            
-            
-            if (guestMode && !val.public && !(isDynamicMenu && hasContent)) continue;
-            if (!guestMode && !(val.public || val.stakeholders || val.team || val.admin) && !(isDynamicMenu && hasContent)) continue;
+        // Transform and filter tabs
+        const transformedTabs = transformTabConfig(tabConfig, guestMode);
+        setTabs(transformedTabs);
+        useNavigationTabsStore.getState().setTabs(transformedTabs);
 
-            const label = val.customHeading || key;
-            
-            let path = val.ipAddress1 || `/${key}`;
-            if (!path.startsWith('/')) path = `/${path}`;
-            path = path.replace(/\/+/g, '/');
-
-            let subtabs: SubTab[] = [];
-
-            if (val.subtabs && Array.isArray(val.subtabs)) {
-              subtabs = val.subtabs.filter(subtab => 
-                subtab && subtab.title && subtab.path
-              );
-            } else {
-              const legacySubtabs = [];
-              for (let i = 1; i <= 5; i++) {
-                const title = val[`subtitle${i}` as keyof typeof val] as string;
-                const url = val[`url${i}` as keyof typeof val] as string;
-                
-                if (title && url) {
-                  legacySubtabs.push({
-                    title,
-                    path: url,
-                    loginUrl: key 
-                  });
-                }
-              }
-              subtabs = legacySubtabs;
-            }
-
-            fetchedTabs.push({
-              label,
-              value: key,
-              path,
-              order: val.order ?? 999,
-              loginUrl: val.loginUrl || key,
-              subtabs,
-              directPath: (val as any).path // Add directPath for single-row menu
-            });
-          }
-
-          fetchedTabs.sort((a, b) => a.order - b.order);
-          setTabs(fetchedTabs);
-          useNavigationTabsStore.getState().setTabs(fetchedTabs);
-        } else {
-          console.warn('No config found in Firebase');
+        // Set site info
+        setSiteInfo({
+          siteTitle: settings.siteTitle || "",
+          siteHeader: settings.siteHeader || "",
+        });
+      } catch (err) {
+        console.error('Error loading header data:', err);
+        if (isMounted) {
           setTabs([]);
         }
-      } catch (err) {
-        console.error('Error loading tabs:', err);
-        setTabs([]);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    fetchTabs();
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [guestMode]);
 
-  useEffect(() => {
-    if (tabs.length === 0) return;
-const findActiveTab = () => {
-  for (const tab of tabs) {
-    const matchingSubtab = tab.subtabs.find(subtab =>
-      location.pathname === subtab.path ||
-      location.pathname.startsWith(subtab.path + '/')
-    );
-    if (matchingSubtab) return tab;
-  }
-  return null;
-};
+  // Memoized active tab calculation
+  const activeTab = useMemo(() => {
+    if (tabs.length === 0) return null;
 
-    // const findActiveTab = () => {
-    //   const exactMatch = tabs.find(tab => location.pathname === tab.path);
-    //   if (exactMatch) return exactMatch;
-
-    //   for (const tab of tabs) {
-    //     const matchingSubtab = tab.subtabs.find(subtab => 
-    //       location.pathname === subtab.path ||
-    //       location.pathname.startsWith(subtab.path + '/')
-    //     );
-    //     if (matchingSubtab) return tab;
-    //   }
-
-    //   return tabs.find(tab =>
-    //     location.pathname.startsWith(tab.path + '/') &&
-    //     location.pathname !== tab.path
-    //   ) || null;
-    // };
-
-    setActiveTab(findActiveTab());
+    for (const tab of tabs) {
+      const matchingSubtab = tab.subtabs.find(subtab =>
+        location.pathname === subtab.path ||
+        location.pathname.startsWith(subtab.path + '/')
+      );
+      if (matchingSubtab) return tab;
+    }
+    return null;
   }, [location.pathname, tabs]);
+
+  // Memoized logout handler
+  const handleLogout = useCallback(async () => {
+    try {
+      await sqliteLogout();
+      useAuthStore.getState().logout();
+      navigationService.navigateToLogin();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }, []);
 
   return (
     <>
@@ -311,7 +284,9 @@ const findActiveTab = () => {
 
         {/* Center - Navigation Tabs */}
         <div className="flex flex-1 justify-center items-center">
-          {menuStyle === 'single-row' ? (
+          {isLoading ? (
+            <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          ) : menuStyle === 'single-row' ? (
             <SingleRowMenu tabs={tabs} role={role} />
           ) : (
             <NavigationMenu tabs={tabs} role={role} />
@@ -329,15 +304,7 @@ const findActiveTab = () => {
           <AppSettings />
           {plan ? (
             <button
-              onClick={async () => {
-                try {
-                  await firebaseLogout();
-                  useAuthStore.getState().logout();
-                  navigationService.navigateToLogin();
-                } catch (error) {
-                  console.error('Logout failed:', error);
-                }
-              }}
+              onClick={handleLogout}
               className="p-2 rounded-full hover:bg-muted transition-colors"
               aria-label="Logout"
             >

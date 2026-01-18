@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { firebaseForgotPassword } from '@/api/firebaseAuth'
+import { sqliteForgotPassword } from '@/api/sqliteAuth'
 import { toast } from 'sonner'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -28,7 +28,7 @@ const ForgotPasswordModal = ({ open, onOpenChange }: { open: boolean; onOpenChan
 
         try {
             setLoading(true)
-            await firebaseForgotPassword(email)
+            await sqliteForgotPassword(email)
             toast.success(t('login.resetEmailSent', 'Reset email sent successfully!'))
             setEmail('')
             onOpenChange(false) // close modal

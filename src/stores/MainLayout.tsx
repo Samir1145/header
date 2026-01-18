@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import ThemeProvider from '@/components/ThemeProvider';
 import TabVisibilityProvider from '@/contexts/TabVisibilityProvider';
 import ApiKeyAlert from '@/components/ApiKeyAlert';
@@ -8,8 +7,7 @@ import StatusIndicator from '@/components/status/StatusIndicator';
 import NetworkStatus from '@/components/NetworkStatus';
 import SiteHeader from '@/features/SiteHeader';
 import { useAuthStore } from '@/stores/state';
-import { useSettingsStore } from '@/stores/settings';
-import { getAuthStatus } from '@/api/firebaseAuth';
+import { getAuthStatus } from '@/api/sqliteAuth';
 import { navigationService } from '@/services/navigation';
 import { ZapIcon } from 'lucide-react';
 
@@ -20,7 +18,7 @@ export default function MainLayout() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { login, logout } = useAuthStore.getState();
+  const { login } = useAuthStore.getState();
 
   const handleApiKeyAlertOpenChange = useCallback((open: boolean) => {
     setApiKeyAlertOpen(open);
@@ -30,58 +28,66 @@ export default function MainLayout() {
     navigationService.setNavigate(navigate);
   }, [navigate]);
 
+  // Check authentication status on app load using SQLite backend
   useEffect(() => {
-    const auth = getAuth();
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('LIGHTRAG-API-TOKEN');
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
+        if (token) {
+          // We have a token, verify it's still valid
           const status = await getAuthStatus();
-          const token = status.access_token || '';
 
-          login(
-            token,
-            status.core_version,
-            status.api_version,
-            status.webui_title ?? null,
-            status.webui_description ?? null,
-            status.role ?? null,
-            status.plan ?? null
-          );
-console.log('status',status)
-          sessionStorage.setItem('VERSION_CHECKED_FROM_LOGIN', 'true');
+          if (status.auth_configured && status.access_token) {
+            // Token is valid, update auth state
+            login(
+              status.access_token,
+              status.core_version,
+              status.api_version,
+              status.webui_title ?? null,
+              status.webui_description ?? null,
+              status.role ?? null,
+              status.plan ?? null
+            );
 
-          // Set guestMode based on plan
-          if (status.plan === 'pro' || status.role === 'admin') {
-            setIsGuestMode(false);
+            console.log('✅ Auth restored:', status);
+            sessionStorage.setItem('VERSION_CHECKED_FROM_LOGIN', 'true');
+
+            // Set guestMode based on plan/role
+            if (status.plan === 'pro' || status.plan === 'premium' || status.plan === 'enterprise' || status.role === 'admin') {
+              setIsGuestMode(false);
+            } else {
+              setIsGuestMode(true);
+            }
           } else {
+            // Token is invalid
+            console.log('🔒 Token invalid, staying as guest');
             setIsGuestMode(true);
           }
-        } catch (err) {
-          console.error('Auth state initialization failed:', err);
-          logout();
+        } else {
+          // No token - guest mode
+          console.log('👤 No token, guest mode');
           setIsGuestMode(true);
-        } finally {
-          setInitializing(false);
         }
-      } else {
-        // Not logged in
-        logout();
+      } catch (err) {
+        console.error('Auth check failed:', err);
+        // Don't logout on error - just stay in current state
         setIsGuestMode(true);
+      } finally {
         setInitializing(false);
       }
-    });
+    };
 
-    return () => unsubscribe();
-  }, [login, logout]);
+    checkAuth();
+  }, [login]);
 
   useEffect(() => {
     if (!initializing && location.pathname === '/') {
-      console.log('isGuestMode',isGuestMode)
+      console.log('isGuestMode', isGuestMode);
       if (isGuestMode) {
         navigate('/retrieval');
       } else {
-        navigate('/access/idoc'); 
+        navigate('/access/idoc');
       }
     }
   }, [initializing, location, navigate, isGuestMode]);

@@ -8,9 +8,7 @@ import {
     DialogContent,
     DialogClose,
 } from '@/components/ui/Dialog'
-import { firebaseRegister, getUserMetadata } from '@/api/firebaseAuth'
-import { doc, setDoc, Timestamp } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { sqliteRegister } from '@/api/sqliteAuth'
 import { useAuthStore } from '@/stores/state'
 import { ZapIcon } from 'lucide-react'
 import { SiteInfo } from '@/lib/constants'
@@ -60,46 +58,34 @@ const RegisterModal = ({ open, onOpenChange, onRegisterSuccess, onShowLogin }: P
 
         try {
             setLoading(true)
-            const result = await firebaseRegister(email, password)
-            const user = result.user
 
-            // Save user to Firestore
-            await setDoc(doc(db, 'users', user.uid), {
-                email: user.email,
-                fullName: fullName,
-                phoneNumber: phoneNumber,
-                role: 'user',
-                plan: 'free',
-                createdAt: Timestamp.now(),
-            })
+            // Use SQLite auth
+            const result = await sqliteRegister(email, password, fullName, phoneNumber)
 
-            const metadata = await getUserMetadata(user?.uid)
-            const token = await user.getIdToken()
+            // Store the token
+            localStorage.setItem('LIGHTRAG-API-TOKEN', result.token)
 
-            login(token, 'firebase', 'v1', null, null, metadata.role, metadata.plan)
+            // Update auth store
+            login(
+                result.token,
+                'sqlite',
+                'v1',
+                null,
+                null,
+                result.user.role,
+                result.user.plan
+            )
 
             toast.success(t('login.successMessage', 'Registration successful!'))
             onOpenChange(false)
-            
+
             // Call success callback if provided
             if (onRegisterSuccess) {
                 onRegisterSuccess()
             }
         } catch (error: any) {
             console.error('Registration error:', error)
-
-            let errorMsg = t('login.errorInvalidCredentials', 'Something went wrong')
-            if (error.code === 'auth/email-already-in-use') {
-                errorMsg = 'This email is already registered.'
-            } else if (error.code === 'auth/invalid-email') {
-                errorMsg = 'Invalid email format.'
-            } else if (error.code === 'auth/weak-password') {
-                errorMsg = 'Password should be at least 6 characters.'
-            } else if (error.message) {
-                errorMsg = error.message
-            }
-
-            toast.error(errorMsg)
+            toast.error(error.message || 'Registration failed')
         } finally {
             setLoading(false)
         }
@@ -199,7 +185,7 @@ const RegisterModal = ({ open, onOpenChange, onRegisterSuccess, onShowLogin }: P
                         </Button>
                     </div>
                 </form>
-                
+
                 <p className='text-right pt-1'>Already have an account?
                     <button className="text-green-600 ml-1" onClick={() => onShowLogin ? onShowLogin() : onOpenChange(false)}>
                         Login Now

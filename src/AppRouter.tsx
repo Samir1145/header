@@ -49,12 +49,13 @@ import FramePage14 from '@/features/FramePage14';
 
 
 function RequireProPlan({ children }: { children: React.ReactNode }) {
-  const { plan } = useAuthStore();
+  const { plan, role } = useAuthStore();
   const location = useLocation();
 
-  const isPro = plan === 'pro';
+  // Allow access if user has pro plan OR is an admin
+  const hasAccess = plan === 'pro' || plan === 'premium' || plan === 'enterprise' || role === 'admin';
 
-  if (!isPro) {
+  if (!hasAccess) {
     return <Navigate to="/retrieval" replace state={{ from: location }} />;
   }
 
@@ -92,7 +93,7 @@ export default function AppRouter() {
             <Route path="iframe" element={<FramePage />} />
             <Route path="iframe2" element={<FramePage2 />} />
             <Route path="iframe3" element={<FramePage3 />} />
-            <Route path="iframe4" element={<FramePage4 />} /> 
+            <Route path="iframe4" element={<FramePage4 />} />
             <Route path="iframe5" element={<FramePage5 />} />
             <Route path="iframe6" element={<FramePage6 />} />
             <Route path="iframe7" element={<FramePage7 />} />
