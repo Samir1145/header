@@ -21,6 +21,11 @@ export default function UshahidiMapPage4() {
   // Buy Now modal state
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string>('');
+  const [selectedItemDescription, setSelectedItemDescription] = useState<string>('');
+  
+  // Store item data with unique IDs to avoid JSON parsing issues in HTML attributes
+  const itemDataMapRef = useRef<Map<string, { title: string; description: string }>>(new Map());
+  const itemIdCounterRef = useRef(0);
   
   // Debug loading state
   console.log('Initial loading state:', isInitialLoading);
@@ -360,9 +365,20 @@ export default function UshahidiMapPage4() {
   }, [applyMarkerFilter]);
 
   // Handle Buy Now button click
-  const handleBuyNowClick = useCallback((itemTitle: string) => {
-    setSelectedItem(itemTitle);
-    setShowBuyNowModal(true);
+  const handleBuyNowClick = useCallback((itemId: string) => {
+    const itemData = itemDataMapRef.current.get(itemId);
+    if (itemData) {
+      setSelectedItem(itemData.title || 'Untitled');
+      setSelectedItemDescription(itemData.description || '');
+      setShowBuyNowModal(true);
+      // Clean up after use
+      itemDataMapRef.current.delete(itemId);
+    } else {
+      // Fallback for old format (just title)
+      setSelectedItem(itemId);
+      setSelectedItemDescription('');
+      setShowBuyNowModal(true);
+    }
   }, []);
 
   // Set up global function for popup buttons
@@ -431,13 +447,19 @@ export default function UshahidiMapPage4() {
               if (typeof lat === 'number' && typeof lng === 'number' && 
                   lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                 
+                // Store item data with unique ID
+                const itemId = `item_${itemIdCounterRef.current++}`;
+                itemDataMapRef.current.set(itemId, {
+                  title: item.properties?.title || 'Untitled',
+                  description: item.properties?.description || ''
+                });
+                
                 const marker = L.marker([lat, lng], { icon: defaultIcon }).bindPopup(`
                   <div class="popup-content">
                     <h3>${item.properties?.title || 'Untitled'}</h3>
-                    <p>${item.properties?.description || 'No description'}</p>
                     ${item.properties?.url ? `<a href="${item.properties.url}" target="_blank">View Details</a>` : ''}
                     <br><br>
-                    <button onclick="handleBuyNow('${item.properties?.title || 'Untitled'}')" 
+                    <button onclick="handleBuyNow('${itemId}')" 
                             class="buy-now-btn" 
                             style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
                       Buy Now
@@ -554,6 +576,7 @@ export default function UshahidiMapPage4() {
         open={showBuyNowModal}
         onOpenChange={setShowBuyNowModal}
         itemTitle={selectedItem}
+        itemDescription={selectedItemDescription}
       />
     </div>
   );

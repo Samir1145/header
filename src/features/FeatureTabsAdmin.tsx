@@ -352,10 +352,9 @@
 // export default AdminTabSettings;
 
 import React, { useState, useEffect } from "react";
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useSettingsStore } from '@/stores/settings';
+import { getNavigationTabs, saveNavigationTabs, invalidateTabsCache } from '@/api/sqliteApi';
 
 type SubTab = {
   title: string;
@@ -443,7 +442,7 @@ const getUrlOptions = (resourceTypes: ResourceType[]) => {
       value: `/resources/${rt.name.toLowerCase().replace(/\s+/g, '-')}`,
       label: `/resources/${rt.name.toLowerCase().replace(/\s+/g, '-')}`
     }));
-  
+
   return [...BASE_URL_OPTIONS, ...resourceOptions];
 };
 
@@ -479,23 +478,23 @@ const AdminTabSettings: React.FC = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config_new');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const savedData = docSnap.data();
-          
+        // Invalidate cache to ensure fresh data on admin page
+        invalidateTabsCache();
+        const savedData = await getNavigationTabs();
+
+        if (savedData && Object.keys(savedData).length > 0) {
           // Handle both predefined tabs and dynamically added menus
           const mergedState: Record<string, TabAccess> = {};
-          
+
           // First, add predefined tabs
           TABS.forEach((tab, index) => {
-            const savedTab = savedData[tab.key] || {};
+            const savedTab = (savedData as any)[tab.key] || {};
             mergedState[tab.key] = {
               public: savedTab.public || false,
               admin: savedTab.admin || false,
               customHeading: savedTab.customHeading || "",
               order: savedTab.order !== undefined ? savedTab.order : index,
-              path: savedTab.path || "", // Load path field from database
+              path: savedTab.path || "",
               subtabs: savedTab.subtabs || [
                 { title: "", path: "", loginUrl: "" },
                 { title: "", path: "", loginUrl: "" },
@@ -505,38 +504,40 @@ const AdminTabSettings: React.FC = () => {
               ]
             };
           });
-          
+
           // Then, add any dynamically added menus
           Object.keys(savedData).forEach(key => {
             if (!TABS.find(tab => tab.key === key) && key !== 'siteSettings' && key !== 'resourceTypes') {
-              const savedTab = savedData[key];
-              mergedState[key] = {
-                public: savedTab.public || false,
-                admin: savedTab.admin || false,
-                customHeading: savedTab.customHeading || "",
-                order: savedTab.order !== undefined ? savedTab.order : 999,
-                path: savedTab.path || "", // Load path field from database
-                subtabs: savedTab.subtabs || [
-                  { title: "", path: "", loginUrl: "" },
-                  { title: "", path: "", loginUrl: "" },
-                  { title: "", path: "", loginUrl: "" },
-                  { title: "", path: "", loginUrl: "" },
-                  { title: "", path: "", loginUrl: "" }
-                ]
-              };
+              const savedTab = (savedData as any)[key];
+              if (savedTab && typeof savedTab === 'object' && 'customHeading' in savedTab) {
+                mergedState[key] = {
+                  public: savedTab.public || false,
+                  admin: savedTab.admin || false,
+                  customHeading: savedTab.customHeading || "",
+                  order: savedTab.order !== undefined ? savedTab.order : 999,
+                  path: savedTab.path || "",
+                  subtabs: savedTab.subtabs || [
+                    { title: "", path: "", loginUrl: "" },
+                    { title: "", path: "", loginUrl: "" },
+                    { title: "", path: "", loginUrl: "" },
+                    { title: "", path: "", loginUrl: "" },
+                    { title: "", path: "", loginUrl: "" }
+                  ]
+                };
+              }
             }
           });
           setTabState(mergedState);
 
-          if (savedData.siteSettings) {
+          if ((savedData as any).siteSettings) {
             setSiteSettings({
-              siteTitle: savedData.siteSettings.siteTitle || "",
-              siteHeader: savedData.siteSettings.siteHeader || "",
+              siteTitle: (savedData as any).siteSettings.siteTitle || "",
+              siteHeader: (savedData as any).siteSettings.siteHeader || "",
             });
           }
 
-          if (savedData.resourceTypes) {
-            setResourceTypes(savedData.resourceTypes);
+          if ((savedData as any).resourceTypes) {
+            setResourceTypes((savedData as any).resourceTypes);
           }
         }
       } catch (error) {
@@ -616,14 +617,14 @@ const AdminTabSettings: React.FC = () => {
   // Resource Type Management Functions
   const addResourceType = () => {
     if (!newResourceType.name.trim()) return;
-    
+
     const resourceType: ResourceType = {
       id: `resource_${Date.now()}`,
       name: newResourceType.name.trim(),
       description: newResourceType.description.trim(),
       isActive: true
     };
-    
+
     setResourceTypes(prev => [...prev, resourceType]);
     setNewResourceType({ name: '', description: '' });
   };
@@ -633,46 +634,45 @@ const AdminTabSettings: React.FC = () => {
   };
 
   const toggleResourceType = (id: string) => {
-    setResourceTypes(prev => 
-      prev.map(rt => 
+    setResourceTypes(prev =>
+      prev.map(rt =>
         rt.id === id ? { ...rt, isActive: !rt.isActive } : rt
       )
     );
   };
 
-const handleSave = async () => {
-  setIsSaving(true);
-  try {
-    const normalizedState = Object.fromEntries(
-      Object.entries(tabState).map(([key, tab]) => {
-        const paddedSubtabs = Array.from({ length: 5 }).map((_, i) => ({
-          title: tab.subtabs[i]?.title || "",
-          path: tab.subtabs[i]?.path || "",
-          loginUrl: tab.subtabs[i]?.loginUrl || "",
-        }));
-        return [key, { 
-          ...tab, 
-          subtabs: paddedSubtabs,
-          path: tab.path || "" // Include the path field for single-row menu
-        }];
-      })
-    );
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const normalizedState = Object.fromEntries(
+        Object.entries(tabState).map(([key, tab]) => {
+          const paddedSubtabs = Array.from({ length: 5 }).map((_, i) => ({
+            title: tab.subtabs[i]?.title || "",
+            path: tab.subtabs[i]?.path || "",
+            loginUrl: tab.subtabs[i]?.loginUrl || "",
+          }));
+          return [key, {
+            ...tab,
+            subtabs: paddedSubtabs,
+            path: tab.path || ""
+          }];
+        })
+      );
 
+      await saveNavigationTabs({
+        ...normalizedState,
+        siteSettings,
+        resourceTypes,
+      } as any);
 
-    await setDoc(doc(db, 'admin_feature_tabs', 'access_config_new'), {
-      ...normalizedState,
-      siteSettings,
-      resourceTypes,
-    });
-
-    toast.success("Access settings saved successfully!");
-  } catch (error) {
-    console.error("Error saving settings:", error);
-    toast.error("Failed to save settings.");
-  } finally {
-    setIsSaving(false);
-  }
-};
+      toast.success("Access settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error("Failed to save settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
 
   return (
@@ -722,7 +722,7 @@ const handleSave = async () => {
               <p className="text-sm text-gray-600 mb-4">
                 Manage resource types that will appear as dynamic paths in the menu (e.g., /resources/documentation, /resources/tutorials)
               </p>
-              
+
               {/* Add New Resource Type */}
               <div className="mb-4 p-4 border rounded-lg bg-white">
                 <h4 className="text-md font-medium text-gray-700 mb-3">Add New Resource Type</h4>
@@ -768,11 +768,10 @@ const handleSave = async () => {
                       <div key={resourceType.id} className="p-4 flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              resourceType.isActive 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-600'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${resourceType.isActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-600'
+                              }`}>
                               {resourceType.isActive ? 'Active' : 'Inactive'}
                             </span>
                             <span className="font-medium text-gray-800">{resourceType.name}</span>
@@ -787,11 +786,10 @@ const handleSave = async () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => toggleResourceType(resourceType.id)}
-                            className={`px-3 py-1 rounded text-xs ${
-                              resourceType.isActive
-                                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                                : 'bg-green-100 text-green-800 hover:bg-green-200'
-                            }`}
+                            className={`px-3 py-1 rounded text-xs ${resourceType.isActive
+                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                              : 'bg-green-100 text-green-800 hover:bg-green-200'
+                              }`}
                           >
                             {resourceType.isActive ? 'Deactivate' : 'Activate'}
                           </button>

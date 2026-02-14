@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { useAuthStore } from '@/stores/state';
 import Button from '@/components/ui/Button';
@@ -10,9 +10,10 @@ interface BuyNowModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   itemTitle: string;
+  itemDescription?: string;
 }
 
-export default function BuyNowModal({ open, onOpenChange, itemTitle }: BuyNowModalProps) {
+export default function BuyNowModal({ open, onOpenChange, itemTitle, itemDescription }: BuyNowModalProps) {
   const { isAuthenticated } = useAuthStore();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -20,8 +21,12 @@ export default function BuyNowModal({ open, onOpenChange, itemTitle }: BuyNowMod
 
   const handleBuyNow = () => {
     if (isAuthenticated) {
-      // User is logged in, proceed to payment
-      setShowRazorpayModal(true);
+      // User is logged in, close this modal first, then open Razorpay
+      onOpenChange(false);
+      // Small delay to ensure modal closes before opening Razorpay
+      setTimeout(() => {
+        setShowRazorpayModal(true);
+      }, 100);
     } else {
       // User not logged in, show login/register options
       setShowLoginModal(true);
@@ -39,19 +44,47 @@ export default function BuyNowModal({ open, onOpenChange, itemTitle }: BuyNowMod
   };
 
   const handleLoginSuccess = () => {
+    // Close all modals first
     setShowLoginModal(false);
-    setShowRazorpayModal(true);
+    onOpenChange(false);
+    // Small delay to ensure modals close before opening Razorpay
+    setTimeout(() => {
+      setShowRazorpayModal(true);
+    }, 100);
   };
 
   const handleRegisterSuccess = () => {
+    // Close all modals first
     setShowRegisterModal(false);
-    setShowRazorpayModal(true);
+    onOpenChange(false);
+    // Small delay to ensure modals close before opening Razorpay
+    setTimeout(() => {
+      setShowRazorpayModal(true);
+    }, 100);
   };
 
   const handlePaymentComplete = () => {
     setShowRazorpayModal(false);
     onOpenChange(false);
   };
+
+  // Close all modals when RazorpayModal opens to prevent overlay stacking
+  useEffect(() => {
+    if (showRazorpayModal) {
+      // Close BuyNowModal
+      if (open) {
+        onOpenChange(false);
+      }
+      // Close LoginModal if open
+      if (showLoginModal) {
+        setShowLoginModal(false);
+      }
+      // Close RegisterModal if open
+      if (showRegisterModal) {
+        setShowRegisterModal(false);
+      }
+    }
+  }, [showRazorpayModal, open, showLoginModal, showRegisterModal, onOpenChange]);
 
   return (
     <>
@@ -121,6 +154,7 @@ export default function BuyNowModal({ open, onOpenChange, itemTitle }: BuyNowMod
         open={showRazorpayModal}
         onOpenChange={setShowRazorpayModal}
         itemTitle={itemTitle}
+        ibbiId={itemDescription}
         onPaymentComplete={handlePaymentComplete}
       />
     </>

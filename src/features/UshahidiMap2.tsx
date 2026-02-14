@@ -21,6 +21,11 @@ export default function UshahidiMapPage2() {
   // Buy Now modal state
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string>('');
+  const [selectedItemDescription, setSelectedItemDescription] = useState<string>('');
+  
+  // Store item data with unique IDs to avoid JSON parsing issues in HTML attributes
+  const itemDataMapRef = useRef<Map<string, { title: string; description: string }>>(new Map());
+  const itemIdCounterRef = useRef(0);
 
   const matchedTab = useLoginUrl();
   const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
@@ -279,9 +284,20 @@ export default function UshahidiMapPage2() {
   }, [applyMarkerFilter]);
 
   // Handle Buy Now button click
-  const handleBuyNowClick = useCallback((itemTitle: string) => {
-    setSelectedItem(itemTitle);
-    setShowBuyNowModal(true);
+  const handleBuyNowClick = useCallback((itemId: string) => {
+    const itemData = itemDataMapRef.current.get(itemId);
+    if (itemData) {
+      setSelectedItem(itemData.title || 'No Title');
+      setSelectedItemDescription(itemData.description || '');
+      setShowBuyNowModal(true);
+      // Clean up after use
+      itemDataMapRef.current.delete(itemId);
+    } else {
+      // Fallback for old format (just title)
+      setSelectedItem(itemId);
+      setSelectedItemDescription('');
+      setShowBuyNowModal(true);
+    }
   }, []);
 
   // Set up global function for popup buttons
@@ -484,13 +500,19 @@ useEffect(() => {
             if (pointGeometry && pointGeometry.coordinates.length >= 2) {
               const [lon, lat] = pointGeometry.coordinates;
               if (lat && lon && clusterRef.current) {
+                // Store item data with unique ID
+                const itemId = `item_${itemIdCounterRef.current++}`;
+                itemDataMapRef.current.set(itemId, {
+                  title: feature.properties?.title || 'No Title',
+                  description: feature.properties?.description || ''
+                });
+                
                 const marker = L.marker([lat, lon], { icon: defaultIcon })
                   .bindPopup(
                     `<div class="popup-content">
-                      <b>${feature.properties?.title || 'No Title'}</b><br>
-                      ${feature.properties?.description || ''}
+                      <b>${feature.properties?.title || 'No Title'}</b>
                       <br><br>
-                      <button onclick="handleBuyNow('${feature.properties?.title || 'No Title'}')" 
+                      <button onclick="handleBuyNow('${itemId}')" 
                               class="buy-now-btn" 
                               style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
                         Buy Now
@@ -520,13 +542,19 @@ useEffect(() => {
           if (Array.isArray(locationArray) && locationArray.length > 0) {
             const { lat, lon } = locationArray[0];
             if (lat && lon && clusterRef.current) {
+              // Store item data with unique ID
+              const itemId = `item_${itemIdCounterRef.current++}`;
+              itemDataMapRef.current.set(itemId, {
+                title: post.title || 'No Title',
+                description: post.content || ''
+              });
+              
               const marker = L.marker([lat, lon], { icon: defaultIcon })
                 .bindPopup(
                   `<div class="popup-content">
-                    <b>${post.title || 'No Title'}</b><br>
-                    ${post.content || ''}
+                    <b>${post.title || 'No Title'}</b>
                     <br><br>
-                    <button onclick="handleBuyNow('${post.title || 'No Title'}')" 
+                    <button onclick="handleBuyNow('${itemId}')" 
                             class="buy-now-btn" 
                             style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
                       Buy Now
@@ -654,6 +682,7 @@ useEffect(() => {
         open={showBuyNowModal}
         onOpenChange={setShowBuyNowModal}
         itemTitle={selectedItem}
+        itemDescription={selectedItemDescription}
       />
     </div>
   );
