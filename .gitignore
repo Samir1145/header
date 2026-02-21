@@ -7,10 +7,29 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
+build
 *.local
+
+# Lock files
+bun.lock
+package-lock.json
+
+# Binary / archive files
+*.zip
+*.sqlite
+*.db
+
+# Images (optional - remove if you want to track images)
+# *.png
+# *.jpg
+# *.jpeg
+# *.svg
 
 # Editor directories and files
 .vscode/*
@@ -22,4 +41,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
 .env
+.env.local
+.env.development
