@@ -11,7 +11,7 @@ import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessag
 import { EraserIcon, SendIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
-import { saveUserQnA } from '@/api/firebaseAuth'
+import { saveUserQnA } from '@/api/sqliteAuth'
 import { backendFreeBaseUrl3 } from '@/lib/constants'
 import { useLoginUrl } from '@/components/useLoginUrl'
 

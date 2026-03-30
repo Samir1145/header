@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
 import ProfessionalDataModal from './ProfessionalDataModal';
-import { auth } from '@/lib/firebase';
+// Auth handled via localStorage token (SQLite backend)
 import { Loader2 } from 'lucide-react';
 
 interface RazorpayModalProps {
@@ -47,9 +47,8 @@ export default function RazorpayModal({ open, onOpenChange, itemTitle, ibbiId, o
   const fetchProfessionalData = async (ibbiIdValue: string) => {
     try {
       // Loading state is already set in the payment handler
-      // Get user's email from Firebase auth
-      const currentUser = auth.currentUser;
-      const email = currentUser?.email || '';
+      // Get user's email from localStorage (SQLite auth)
+      const email = localStorage.getItem('LIGHTRAG-USER-EMAIL') || '';
       
       if (!email) {
         throw new Error('User email not found. Please ensure you are logged in.');

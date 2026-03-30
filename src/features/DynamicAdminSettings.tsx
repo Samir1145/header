@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getNavigationTabs, saveNavigationTabs } from '@/api/sqliteApi';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/state';
 
@@ -99,11 +98,9 @@ const DynamicAdminSettings: React.FC = () => {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const docRef = doc(db, 'admin_feature_tabs', 'access_config');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const savedData = docSnap.data();
-          console.log('Loaded data from Firebase:', savedData);
+        const savedData = await getNavigationTabs();
+        if (savedData && Object.keys(savedData).length > 0) {
+          console.log('Loaded data from SQLite:', savedData);
           
           const mergedState: Record<string, TabAccess> = currentTabs.reduce((acc, tab) => {
             acc[tab.key] = {
@@ -119,7 +116,7 @@ const DynamicAdminSettings: React.FC = () => {
           }, {} as Record<string, TabAccess>);
           setTabState(mergedState);
         } else {
-          console.log('No existing data found in Firebase, using defaults');
+          console.log('No existing data found, using defaults');
           setTabState(initialState);
         }
       } catch (error) {
@@ -160,9 +157,9 @@ const DynamicAdminSettings: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      console.log('Saving tabState to Firebase:', tabState);
-      await setDoc(doc(db, 'admin_feature_tabs', 'access_config'), tabState);
-      console.log('Successfully saved to Firebase');
+      console.log('Saving tabState to SQLite:', tabState);
+      await saveNavigationTabs(tabState as any);
+      console.log('Successfully saved to SQLite');
       toast.success('Access settings saved successfully!');
     } catch (error) {
       console.error('Error saving settings:', error);

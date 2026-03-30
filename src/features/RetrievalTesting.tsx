@@ -11,8 +11,7 @@ import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessag
 import { EraserIcon, SendIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
-import { saveUserQnA } from '@/api/firebaseAuth'
-import { getAuth } from 'firebase/auth'
+import { saveUserQnA } from '@/api/sqliteAuth'
 import { backendBaseUrl } from '@/lib/constants'
 import { useNavigationTabsStore } from '@/stores/navigationTabs';
 import { useLocation } from 'react-router-dom';
@@ -177,8 +176,6 @@ const allTabs = useNavigationTabsStore(state => state.accessTabs);
     }
 
     try {
-      const auth = getAuth()
-      const currentUser = auth.currentUser
       let fullAnswer = ''
 
       if (state.querySettings.stream) {
@@ -190,8 +187,8 @@ const allTabs = useNavigationTabsStore(state => state.accessTabs);
           streamError += error
         })
 
-        if (fullAnswer && currentUser?.uid && currentUser.email) {
-          await saveUserQnA(actualQuery, fullAnswer, currentUser.uid, currentUser.email)
+        if (fullAnswer) {
+          await saveUserQnA(actualQuery, fullAnswer, 'user', '')
         }
 
         if (streamError) {
@@ -202,8 +199,8 @@ const allTabs = useNavigationTabsStore(state => state.accessTabs);
         fullAnswer = response.response
         updateAssistantMessage(fullAnswer)
 
-        if (fullAnswer && currentUser?.uid && currentUser.email) {
-          await saveUserQnA(actualQuery, fullAnswer, currentUser.uid, currentUser.email)
+        if (fullAnswer) {
+          await saveUserQnA(actualQuery, fullAnswer, 'user', '')
         }
       }
     } catch (err) {

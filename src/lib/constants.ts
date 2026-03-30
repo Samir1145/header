@@ -1,13 +1,15 @@
 import { ButtonVariantType } from '@/components/ui/Button'
 
 
-export const backendBaseUrl = 'https://resolutionbazaar.com:9621' // Using remote server for now
-export const backendFreeBaseUrl = 'https://resolutionbazaar.com:9621'
-export const backendFreeBaseUrl2 = 'https://resolutionbazaar.com:9622'
-export const backendFreeBaseUrl3 = 'https://resolutionbazaar.com:9623'
-export const backendFreeBaseUrl4 = 'https://resolutionbazaar.com:9624'
-export const backendFreeBaseUrl5 = 'https://resolutionbazaar.com:9625'
-export const backendFreeBaseUrl6 = 'https://resolutionbazaar.com:9626'
+export const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'https://resolutionbazaar.com:9621'
+export const backendFreeBaseUrl = import.meta.env.VITE_BACKEND_URL || 'https://resolutionbazaar.com:9621'
+export const backendFreeBaseUrl2 = import.meta.env.VITE_BACKEND_URL_2 || 'https://resolutionbazaar.com:9622'
+export const backendFreeBaseUrl3 = import.meta.env.VITE_BACKEND_URL_3 || 'https://resolutionbazaar.com:9623'
+export const backendFreeBaseUrl4 = import.meta.env.VITE_BACKEND_URL_4 || 'https://resolutionbazaar.com:9624'
+export const backendFreeBaseUrl5 = import.meta.env.VITE_BACKEND_URL_5 || 'https://resolutionbazaar.com:9625'
+export const backendFreeBaseUrl6 = import.meta.env.VITE_BACKEND_URL_6 || 'https://resolutionbazaar.com:9626'
+
+console.log('🔧 Backend URLs:', { backendBaseUrl, backendFreeBaseUrl })
 
 // Server token configuration interface
 export interface ServerConfig {

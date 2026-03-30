@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { api } from '@/api/sqliteAuth';
 import { useParams } from 'react-router-dom';
 
 // Define resource types
@@ -23,8 +22,8 @@ interface FolderNode {
 
 type TreeNode = ResourceNode | FolderNode;
 
-// Firebase resource document interface
-interface FirebaseResource {
+// Resource document interface
+interface ResourceRecord {
   id: string;
   name: string;
   description?: string;
@@ -56,13 +55,13 @@ export default function ResourcesPage(): React.ReactElement {
 
   const selectedResource = selectedResourceId ? findResourceById(resourcesTree, selectedResourceId) : null;
 
-  // Fetch resources from Firebase filtered by resource_type
+  // Fetch resources from SQLite API filtered by resource_type
   useEffect(() => {
     const fetchResources = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         if (!resourceType) {
           setError('Resource type not specified in URL');
           setLoading(false);
@@ -70,37 +69,17 @@ export default function ResourcesPage(): React.ReactElement {
         }
 
         console.log('🔍 Fetching resources for type:', resourceType);
-        
-        const resourcesRef = collection(db, 'resources');
-        
-        // Try to query with resource_type filter first
-        let querySnapshot;
+
+        let resources: ResourceRecord[] = [];
         try {
-          const q = query(
-            resourcesRef, 
-            where('resource_type', '==', resourceType)
-          );
-          querySnapshot = await getDocs(q);
-        } catch (filterError) {
-          console.warn('⚠️ Filter query failed, trying without filter:', filterError);
-          // Fallback: get all resources and filter client-side
-          querySnapshot = await getDocs(resourcesRef);
+          const response = await api.get(`/api/resources?type=${encodeURIComponent(resourceType)}`);
+          resources = response.data;
+        } catch (fetchError) {
+          console.warn('⚠️ Resources API not available:', fetchError);
+          resources = [];
         }
-        
-        const allResources: FirebaseResource[] = [];
-        querySnapshot.forEach((doc) => {
-          allResources.push({
-            id: doc.id,
-            ...doc.data()
-          } as FirebaseResource);
-        });
 
-        // Filter by resource_type on client side if needed
-        const resources = allResources.filter(resource => 
-          resource.resource_type === resourceType
-        );
-
-        // Sort resources by name on the client side
+        // Sort resources by name
         resources.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         console.log('📋 Found resources:', resources.length, resources);
@@ -131,7 +110,7 @@ export default function ResourcesPage(): React.ReactElement {
   }, [resourceType]);
 
   // Convert Firebase resources to tree structure grouped by category
-  const convertResourcesToTree = (resources: FirebaseResource[]): TreeNode[] => {
+  const convertResourcesToTree = (resources: ResourceRecord[]): TreeNode[] => {
     const categoryMap = new Map<string, ResourceNode[]>();
     
     // Group resources by category

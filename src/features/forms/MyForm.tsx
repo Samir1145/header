@@ -3,9 +3,7 @@ import { withTheme, IChangeEvent } from '@rjsf/core';
 import { Theme as Mui5Theme } from '@rjsf/mui';
 import validator from '@rjsf/validator-ajv8';
 import { JSONSchema7 } from 'json-schema';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { api } from '@/api/sqliteAuth';
 import Button from '@/components/ui/Button';
 import useTheme from '@/hooks/useTheme';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
@@ -40,20 +38,16 @@ export default function MyForm({ schema, uiSchema, formData, setFormData }: MyFo
     setSubmitMsg('');
 
     try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-
       const metadata = {
-        formName: 'FastTrackClaimFormA',
-        submittedBy: user?.uid || 'anonymous',
-        submittedAt: Timestamp.now(),
-        rawFormData: JSON.stringify(formData),
+        formTitle: 'FastTrackClaimFormA',
+        formData: formData,
+        status: 'submitted',
       };
 
-      await addDoc(collection(db, 'form_submissions'), metadata);
-      setSubmitMsg('✅ Data submitted to Firebase Firestore!');
+      await api.post('/api/forms/submissions', metadata);
+      setSubmitMsg('✅ Data submitted successfully!');
     } catch (err) {
-      console.error('Firestore submission error:', err);
+      console.error('Form submission error:', err);
       setSubmitMsg('❌ Submission failed!');
     }
 

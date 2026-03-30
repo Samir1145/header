@@ -204,7 +204,9 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
         if (!isMounted) return;
 
         // Transform and filter tabs
+        console.log('🔧 SiteHeader -> raw tabConfig from API:', JSON.stringify(tabConfig))
         const transformedTabs = transformTabConfig(tabConfig, guestMode);
+        console.log('🔧 SiteHeader -> transformedTabs:', JSON.stringify(transformedTabs))
         setTabs(transformedTabs);
         useNavigationTabsStore.getState().setTabs(transformedTabs);
 

@@ -1,9 +1,9 @@
 import axios, { AxiosError } from 'axios'
-import { backendBaseUrl, getTokenForServer } from '@/lib/constants'
+import { backendBaseUrl } from '@/lib/constants'
 import { errorMessage } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settings'
 import { navigationService } from '@/services/navigation'
-import { getAuth } from 'firebase/auth'
+// Firebase auth removed — using localStorage token instead
 
 // Types
 export type LightragNodeType = {
@@ -188,33 +188,11 @@ const axiosInstance = axios.create({
   }
 })
 
-// Interceptor: add api key and check authentication
+// Interceptor: add api key — skip auth token when LightRAG auth is disabled
 axiosInstance.interceptors.request.use(async (config) => {
+  console.log('📡 axios interceptor -> Request:', config.method?.toUpperCase(), config.baseURL, config.url)
   const apiKey = useSettingsStore.getState().apiKey
-  
-  // First, try to get Firebase token if user is authenticated
-  const auth = getAuth()
-  const currentUser = auth.currentUser
-  
-  if (currentUser) {
-    try {
-      const firebaseToken = await currentUser.getIdToken()
-      config.headers['Authorization'] = `Bearer ${firebaseToken}`
-      console.log('🔐 Using Firebase token for request to:', config.url)
-    } catch (error) {
-      console.warn('⚠️ Failed to get Firebase token:', error)
-    }
-  } else {
-    // Fallback to environment-based token if Firebase auth is not available
-    const requestUrl = config.baseURL || config.url || ''
-    const token = await getTokenForServer(requestUrl)
-    
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
-      console.log('🔐 Using environment token for request to:', config.url)
-    }
-  }
-  
+
   if (apiKey) {
     config.headers['X-API-Key'] = apiKey
   }
@@ -302,7 +280,9 @@ export const getDocumentsScanProgress = async (): Promise<LightragDocumentsScanP
 
 
 export const queryText = async (backendFreeBaseUrl:string, request: QueryRequest): Promise<QueryResponse> => {
+  console.log('📡 queryText -> URL:', backendFreeBaseUrl + '/query', 'Request:', request)
   const response = await axiosInstance.post(backendFreeBaseUrl + '/query', request)
+  console.log('📡 queryText -> Response:', response.status, response.data)
   return response.data
 }
 
@@ -313,67 +293,44 @@ export const queryTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  
-  // First, try to get Firebase token if user is authenticated
-  const auth = getAuth()
-  const currentUser = auth.currentUser
-  let token = null
-  
-  if (currentUser) {
-    try {
-      token = await currentUser.getIdToken()
-      console.log('🔐 Using Firebase token for stream request')
-    } catch (error) {
-      console.warn('⚠️ Failed to get Firebase token for stream:', error)
-    }
-  } else {
-    // Fallback to environment-based token
-    token = await getTokenForServer(backendFreeBaseUrl);
-  }
-  
-  console.log('🔍 queryTextStream token:', token);
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
     'X-App-Source': 'vite',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
   if (apiKey) {
     headers['X-API-Key'] = apiKey;
   }
 
   try {
-    const response = await fetch(`${backendFreeBaseUrl}/query/stream`, {
+    const streamUrl = `${backendFreeBaseUrl}/query/stream`
+    console.log('📡 queryStream -> URL:', streamUrl, 'Request:', JSON.stringify(request).substring(0, 200))
+
+    const response = await fetch(streamUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(request),
     });
 
+    console.log('📡 queryStream -> Response:', response.status, response.statusText)
+
     if (!response.ok) {
-      // Handle 401 Unauthorized error specifically
       if (response.status === 401) {
-        console.warn('⚠️ Stream authentication failed for:', `${backendFreeBaseUrl}/query/stream`)
-        
-        // Don't auto-logout for stream requests - just throw error
-        console.log('🔍 Stream authentication failed - not logging out user')
-        const authError = new Error('Authentication required');
-        throw authError;
+        console.warn('⚠️ Stream auth failed for:', streamUrl)
+        throw new Error('Authentication required');
       }
 
-      // Handle other common HTTP errors with specific messages
       let errorBody = 'Unknown error';
       try {
-        errorBody = await response.text(); // Try to get error details from body
+        errorBody = await response.text();
       } catch { /* ignore */ }
 
-      // Format error message similar to axios interceptor for consistency
-      const url = `${backendFreeBaseUrl}/query/stream`;
+      console.error('❌ queryStream error:', response.status, errorBody, streamUrl)
       throw new Error(
         `${response.status} ${response.statusText}\n${JSON.stringify(
           { error: errorBody }
-        )}\n${url}`
+        )}\n${streamUrl}`
       );
     }
 
@@ -526,32 +483,12 @@ export const queryFreeTextStream = async (
   onError?: (error: string) => void
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
-  
-  // First, try to get Firebase token if user is authenticated
-  const auth = getAuth()
-  const currentUser = auth.currentUser
-  let token = null
-  
-  if (currentUser) {
-    try {
-      token = await currentUser.getIdToken()
-      console.log('🔐 Using Firebase token for free stream request')
-    } catch (error) {
-      console.warn('⚠️ Failed to get Firebase token for free stream:', error)
-    }
-  } else {
-    // Fallback to environment-based token
-    token = await getTokenForServer(backendFreeBaseUrl);
-  }
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Accept': 'application/x-ndjson',
     'X-App-Source': 'vite',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
   if (apiKey) {
     headers['X-API-Key'] = apiKey;
   }
@@ -559,35 +496,33 @@ export const queryFreeTextStream = async (
 
 
   try {
-    const response = await fetch(`${backendFreeBaseUrl}/query/stream`, {
+    const streamUrl = `${backendFreeBaseUrl}/query/stream`
+    console.log('📡 queryStream -> URL:', streamUrl, 'Request:', JSON.stringify(request).substring(0, 200))
+
+    const response = await fetch(streamUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(request),
     });
 
+    console.log('📡 queryStream -> Response:', response.status, response.statusText)
+
     if (!response.ok) {
-      // Handle 401 Unauthorized error specifically
       if (response.status === 401) {
-        console.warn('⚠️ Stream authentication failed for:', `${backendFreeBaseUrl}/query/stream`)
-        
-        // Don't auto-logout for stream requests - just throw error
-        console.log('🔍 Stream authentication failed - not logging out user')
-        const authError = new Error('Authentication required');
-        throw authError;
+        console.warn('⚠️ Stream auth failed for:', streamUrl)
+        throw new Error('Authentication required');
       }
 
-      // Handle other common HTTP errors with specific messages
       let errorBody = 'Unknown error';
       try {
-        errorBody = await response.text(); // Try to get error details from body
+        errorBody = await response.text();
       } catch { /* ignore */ }
 
-      // Format error message similar to axios interceptor for consistency
-      const url = `${backendFreeBaseUrl}/query/stream`;
+      console.error('❌ queryStream error:', response.status, errorBody, streamUrl)
       throw new Error(
         `${response.status} ${response.statusText}\n${JSON.stringify(
           { error: errorBody }
-        )}\n${url}`
+        )}\n${streamUrl}`
       );
     }
 
@@ -795,29 +730,27 @@ export const deleteDocuments = async (docIds: string[], deleteFile: boolean = fa
 
 
 export const getAuthStatus = async (): Promise<AuthStatusResponse> => {
-  const auth = getAuth()
-  const user = auth.currentUser
+  const token = localStorage.getItem('LIGHTRAG-API-TOKEN')
 
-  if (user) {
-    const token = await user.getIdToken()
+  if (token) {
     return {
       auth_configured: true,
-      auth_mode: 'firebase',
+      auth_mode: 'enabled',
       access_token: token,
-      core_version: 'firebase',
+      core_version: 'sqlite',
       api_version: 'v1',
-      webui_title: 'Firebase Web UI',
-      webui_description: 'Fully Firebase-powered app'
+      webui_title: localStorage.getItem('LIGHTRAG-WEBUI-TITLE') || 'Rezolution Bazar',
+      webui_description: localStorage.getItem('LIGHTRAG-WEBUI-DESCRIPTION') || 'Powered by SQLite'
     }
   }
 
   return {
     auth_configured: false,
-    auth_mode: 'firebase',
+    auth_mode: 'disabled',
     access_token: null,
-    core_version: 'firebase',
+    core_version: 'sqlite',
     api_version: 'v1',
-    webui_title: 'Firebase Web UI',
+    webui_title: 'Rezolution Bazar',
     webui_description: 'Not logged in'
   }
 }

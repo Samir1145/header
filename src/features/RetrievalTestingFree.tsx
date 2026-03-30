@@ -11,7 +11,7 @@ import { ChatMessage, MessageWithError } from '@/components/retrieval/ChatMessag
 import { EraserIcon, SendIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { QueryMode } from '@/api/lightrag'
-import { saveUserQnA } from '@/api/firebaseAuth'
+import { saveUserQnA } from '@/api/sqliteAuth'
 import { backendFreeBaseUrl } from '@/lib/constants'
 import { useLoginUrl } from '@/components/useLoginUrl'
 
@@ -166,6 +166,8 @@ export default function RetrievalTestingFree() {
         }
 
         try {
+            console.log('🔍 RetrievalTestingFree -> loginUrl:', loginUrl, 'matchedTab:', matchedTab, 'backendFreeBaseUrl:', backendFreeBaseUrl)
+            console.log('🔍 RetrievalTestingFree -> queryParams:', queryParams)
 
             let fullAnswer = ''
 

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/Alert';
 import { Wifi, WifiOff } from 'lucide-react';
-import { isFirebaseOnline } from '@/lib/firebase';
-
 export default function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showOfflineAlert, setShowOfflineAlert] = useState(false);
@@ -18,32 +16,17 @@ export default function NetworkStatus() {
       setShowOfflineAlert(true);
     };
 
-    // Check initial status
-    setIsOnline(navigator.onLine && isFirebaseOnline());
+    setIsOnline(navigator.onLine);
     setShowOfflineAlert(!navigator.onLine);
 
-    // Add event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Check Firebase connectivity periodically
-    const interval = setInterval(() => {
-      const firebaseOnline = isFirebaseOnline();
-      const browserOnline = navigator.onLine;
-      const shouldBeOnline = browserOnline && firebaseOnline;
-      
-      if (isOnline !== shouldBeOnline) {
-        setIsOnline(shouldBeOnline);
-        setShowOfflineAlert(!shouldBeOnline);
-      }
-    }, 5000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(interval);
     };
-  }, [isOnline]);
+  }, []);
 
   if (!showOfflineAlert) {
     return null;
