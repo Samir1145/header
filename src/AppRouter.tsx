@@ -3,12 +3,7 @@ import { Toaster } from 'sonner';
 import ThemeProvider from '@/components/ThemeProvider';
 import MainLayout from '@/stores/MainLayout';
 import RetrievalTestingFree from '@/features/RetrievalTestingFree';
-import UshahidiMapPage from '@/features/UshahidiMapPage';
-import UshahidiMapPage1 from '@/features/UshahidiMap1';
-import UshahidiMapPage2 from '@/features/UshahidiMap2';
-import UshahidiMapPage3 from '@/features/UshahidiMapPage3';
-import UshahidiMapPage4 from '@/features/UshahidiMapPage4';
-import UshahidiMapPage5 from '@/features/UshahidiMapPage5';
+import MapPage from '@/features/MapPage';
 import AgentsPage from '@/features/AgentsPage';
 import RetrievalTesting from '@/features/RetrievalTesting';
 import DocumentManager from '@/features/DocumentManager';
@@ -68,12 +63,9 @@ export default function AppRouter() {
             <Route index path="retrieval3" element={<RetrievalTestingFree3 />} />
             <Route index path="retrieval4" element={<RetrievalTestingFree4 />} />
             <Route index path="retrieval5" element={<RetrievalTestingFree5 />} />
-            <Route path="map" element={<UshahidiMapPage />} />
-            <Route path="map1" element={<UshahidiMapPage1 />} />
-            <Route path="map2" element={<UshahidiMapPage2 />} />
-            <Route path="map3" element={<UshahidiMapPage3 />} />
-            <Route path="map4" element={<UshahidiMapPage4 />} />
-            <Route path="map5" element={<UshahidiMapPage5 />} />
+            {['1','2','3','4','5','6'].map(n => (
+              <Route key={n} path={`map${n}`} element={<MapPage mapId={`map${n}`} />} />
+            ))}
             <Route path="agents" element={<AgentsPage />} />
             {['1','2','3','4','5','6','7','8','9','10','11','12','13','14'].map(n => (
               <Route key={n} path={`iframe${n}`} element={<FramePage />} />
