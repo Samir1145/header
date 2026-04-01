@@ -303,6 +303,13 @@ export default function MapPage({ mapId }: MapPageProps) {
     };
 
     fetchData();
+
+    return () => {
+      if (radiusCircleRef.current) { radiusCircleRef.current.remove(); radiusCircleRef.current = null; }
+      if (clusterRef.current) { clusterRef.current.clearLayers(); clusterRef.current = null; }
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+      allMarkersRef.current = [];
+    };
   }, [loginUrl, mapId]);
 
   return (
@@ -331,7 +338,7 @@ export default function MapPage({ mapId }: MapPageProps) {
         onNameSearch={handleNameSearch}
         onCombinedSearch={handleCombinedSearch}
         onClear={handleClearFilter}
-        className="absolute top-4 left-4 z-30 bg-white p-4 rounded-lg shadow-lg max-w-sm"
+        className="absolute top-4 right-4 z-[60]"
       />
       <div id={mapId} className="w-full h-full"></div>
       <BuyNowModal
