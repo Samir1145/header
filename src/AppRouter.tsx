@@ -32,19 +32,6 @@ import RetrievalTestingFree3 from './features/RetrievalTestingFree3';
 import RetrievalTestingFree4 from './features/RetrievalTestingFree4';
 import RetrievalTestingFree5 from './features/RetrievalTestingFree5';
 import FramePage from '@/features/FramePage';
-import FramePage2 from '@/features/FramePage2';
-import FramePage3 from '@/features/FramePage3';
-import FramePage4 from '@/features/FramePage4';
-import FramePage5 from '@/features/FramePage5';
-import FramePage6 from '@/features/FramePage6';
-import FramePage7 from '@/features/FramePage7';
-import FramePage8 from '@/features/FramePage8';
-import FramePage9 from '@/features/FramePage9';
-import FramePage10 from '@/features/FramePage10';
-import FramePage11 from '@/features/FramePage11';
-import FramePage12 from '@/features/FramePage12';
-import FramePage13 from '@/features/FramePage13';
-import FramePage14 from '@/features/FramePage14';
 
 
 function RequireProPlan({ children }: { children: React.ReactNode }) {
@@ -88,20 +75,9 @@ export default function AppRouter() {
             <Route path="map4" element={<UshahidiMapPage4 />} />
             <Route path="map5" element={<UshahidiMapPage5 />} />
             <Route path="agents" element={<AgentsPage />} />
-            <Route path="iframe" element={<FramePage />} />
-            <Route path="iframe2" element={<FramePage2 />} />
-            <Route path="iframe3" element={<FramePage3 />} />
-            <Route path="iframe4" element={<FramePage4 />} />
-            <Route path="iframe5" element={<FramePage5 />} />
-            <Route path="iframe6" element={<FramePage6 />} />
-            <Route path="iframe7" element={<FramePage7 />} />
-            <Route path="iframe8" element={<FramePage8 />} />
-            <Route path="iframe9" element={<FramePage9 />} />
-            <Route path="iframe10" element={<FramePage10 />} />
-            <Route path="iframe11" element={<FramePage11 />} />
-            <Route path="iframe12" element={<FramePage12 />} />
-            <Route path="iframe13" element={<FramePage13 />} />
-            <Route path="iframe14" element={<FramePage14 />} />
+            {['', '2','3','4','5','6','7','8','9','10','11','12','13','14'].map(n => (
+              <Route key={n} path={`iframe${n}`} element={<FramePage />} />
+            ))}
             <Route path="resources/:resourceType" element={<ResourcesPage />} />
             <Route path="wren-chat" element={<WrenChatPage />} />
             <Route path="neon-search" element={<NeonSearchPage />} />
