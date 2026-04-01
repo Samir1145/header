@@ -81,7 +81,6 @@ export default function ResourcesPage(): React.ReactElement {
         resources.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         console.log('📋 Found resources:', resources.length, resources);
-        console.log('📋 All resources:', allResources.length, allResources);
 
         // Convert resources to tree structure grouped by category
         const tree = convertResourcesToTree(resources);

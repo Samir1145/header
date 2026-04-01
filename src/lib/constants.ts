@@ -1,13 +1,13 @@
 import { ButtonVariantType } from '@/components/ui/Button'
 
 
-export const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || 'https://resolutionbazaar.com:9621'
-export const backendFreeBaseUrl = import.meta.env.VITE_BACKEND_URL || 'https://resolutionbazaar.com:9621'
-export const backendFreeBaseUrl2 = import.meta.env.VITE_BACKEND_URL_2 || 'https://resolutionbazaar.com:9622'
-export const backendFreeBaseUrl3 = import.meta.env.VITE_BACKEND_URL_3 || 'https://resolutionbazaar.com:9623'
-export const backendFreeBaseUrl4 = import.meta.env.VITE_BACKEND_URL_4 || 'https://resolutionbazaar.com:9624'
-export const backendFreeBaseUrl5 = import.meta.env.VITE_BACKEND_URL_5 || 'https://resolutionbazaar.com:9625'
-export const backendFreeBaseUrl6 = import.meta.env.VITE_BACKEND_URL_6 || 'https://resolutionbazaar.com:9626'
+export const backendBaseUrl = import.meta.env.VITE_BACKEND_URL || ''
+export const backendFreeBaseUrl = import.meta.env.VITE_BACKEND_URL || ''
+export const backendFreeBaseUrl2 = import.meta.env.VITE_BACKEND_URL_2 || ''
+export const backendFreeBaseUrl3 = import.meta.env.VITE_BACKEND_URL_3 || ''
+export const backendFreeBaseUrl4 = import.meta.env.VITE_BACKEND_URL_4 || ''
+export const backendFreeBaseUrl5 = import.meta.env.VITE_BACKEND_URL_5 || ''
+export const backendFreeBaseUrl6 = import.meta.env.VITE_BACKEND_URL_6 || ''
 
 
 // Server token configuration interface
@@ -25,13 +25,11 @@ export const getServerConfigs = (): ServerConfig[] => {
   for (let i = 1; i <= 6; i++) {
     const url = import.meta.env[`VITE_SERVER_${i}_URL`]
     const token = import.meta.env[`VITE_SERVER_${i}_TOKEN`]
-    
+
     if (url && token) {
-      configs.push({
-        url,
-        token,
-        name: `Server ${i}`
-      })
+      configs.push({ url, token, name: `Server ${i}` })
+    } else if (url || token) {
+      console.warn(`Server ${i} config is incomplete: both VITE_SERVER_${i}_URL and VITE_SERVER_${i}_TOKEN must be set.`)
     }
   }
   

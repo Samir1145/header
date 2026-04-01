@@ -72,9 +72,20 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
   const handleCreateForm = async () => {
     try {
       setError(null);
-      
-      const schemaObj = JSON.parse(formData.schema);
-      const uiSchemaObj = formData.uiSchema ? JSON.parse(formData.uiSchema) : undefined;
+
+      let schemaObj, uiSchemaObj;
+      try {
+        schemaObj = JSON.parse(formData.schema);
+      } catch {
+        setError('Invalid JSON in Schema field. Please check the syntax.');
+        return;
+      }
+      try {
+        uiSchemaObj = formData.uiSchema ? JSON.parse(formData.uiSchema) : undefined;
+      } catch {
+        setError('Invalid JSON in UI Schema field. Please check the syntax.');
+        return;
+      }
       
       await FormManagementAPI.createFormSchema({
         title: formData.title,
@@ -98,12 +109,23 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
 
   const handleEditForm = async () => {
     if (!editingForm) return;
-    
+
     try {
       setError(null);
-      
-      const schemaObj = JSON.parse(formData.schema);
-      const uiSchemaObj = formData.uiSchema ? JSON.parse(formData.uiSchema) : undefined;
+
+      let schemaObj, uiSchemaObj;
+      try {
+        schemaObj = JSON.parse(formData.schema);
+      } catch {
+        setError('Invalid JSON in Schema field. Please check the syntax.');
+        return;
+      }
+      try {
+        uiSchemaObj = formData.uiSchema ? JSON.parse(formData.uiSchema) : undefined;
+      } catch {
+        setError('Invalid JSON in UI Schema field. Please check the syntax.');
+        return;
+      }
       
       await FormManagementAPI.updateFormSchema(editingForm.id!, {
         title: formData.title,
@@ -126,11 +148,11 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
     }
   };
 
-  const handleDeleteForm = async (formId: string) => {
+  const handleDeleteForm = async (formId: number) => {
     if (!confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
       return;
     }
-    
+
     try {
       setError(null);
       await FormManagementAPI.deleteFormSchema(formId);
@@ -182,11 +204,6 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
       tags: '',
       pageAssignments: []
     });
-  };
-
-  const getSubmissionsCount = (_formId: string) => {
-    // TODO: Implement submission count when submissions are loaded
-    return 0;
   };
 
   if (loading) {
@@ -313,7 +330,7 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
                       </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      Version: {form.version} • Submissions: {getSubmissionsCount(form.id!)}
+                      Version: {form.version}
                     </div>
                     {form.tags && form.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">

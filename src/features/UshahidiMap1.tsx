@@ -27,8 +27,7 @@ export default function UshahidiMapPage1() {
   const itemDataMapRef = useRef<Map<string, { title: string; description: string }>>(new Map());
   const itemIdCounterRef = useRef(0);
 
-  const matchedTab = useLoginUrl();
-  const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
+  const loginUrl = useLoginUrl();
 
   // Apply marker filtering
   const applyMarkerFilter = useCallback((center: { lat: number; lng: number } | null, radius: number) => {

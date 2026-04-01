@@ -15,28 +15,39 @@ export interface SubTab {
     loginUrl: string;
 }
 
+export interface TabEntry {
+    public?: boolean;
+    stakeholders?: boolean;
+    team?: boolean;
+    admin?: boolean;
+    customHeading?: string;
+    order?: number;
+    loginUrl?: string;
+    subtabs?: SubTab[];
+    ipAddress?: string;
+    filePath?: string;
+    ipAddress1?: string;
+    subtitle1?: string;
+    url1?: string;
+    subtitle2?: string;
+    url2?: string;
+    subtitle3?: string;
+    url3?: string;
+    subtitle4?: string;
+    url4?: string;
+    subtitle5?: string;
+    url5?: string;
+}
+
+export interface SiteSettings {
+    siteTitle?: string;
+    siteHeader?: string;
+}
+
 export interface TabConfig {
-    [key: string]: {
-        public?: boolean;
-        stakeholders?: boolean;
-        team?: boolean;
-        admin?: boolean;
-        customHeading?: string;
-        order?: number;
-        loginUrl?: string;
-        subtabs?: SubTab[];
-        ipAddress1?: string;
-        subtitle1?: string;
-        url1?: string;
-        subtitle2?: string;
-        url2?: string;
-        subtitle3?: string;
-        url3?: string;
-        subtitle4?: string;
-        url4?: string;
-        subtitle5?: string;
-        url5?: string;
-    };
+    [key: string]: TabEntry | SiteSettings | unknown[] | undefined;
+    siteSettings?: SiteSettings;
+    resourceTypes?: unknown[];
 }
 
 let tabsCache: { data: TabConfig | null; timestamp: number } = {
@@ -50,11 +61,9 @@ export const getNavigationTabs = async (): Promise<TabConfig> => {
         // Check cache
         const now = Date.now();
         if (tabsCache.data && now - tabsCache.timestamp < TABS_CACHE_TTL) {
-            console.log('📋 Using cached navigation tabs');
             return tabsCache.data;
         }
 
-        console.log('📋 Fetching navigation tabs from API');
         const response = await api.get<TabConfig>('/api/admin/tabs');
 
         // Update cache
@@ -69,7 +78,6 @@ export const getNavigationTabs = async (): Promise<TabConfig> => {
 
         // Return cached data if available, even if stale
         if (tabsCache.data) {
-            console.log('📋 Returning stale cached tabs');
             return tabsCache.data;
         }
 
@@ -88,7 +96,6 @@ export const saveNavigationTabs = async (config: TabConfig): Promise<void> => {
         // Notify components to refresh
         window.dispatchEvent(new CustomEvent('site-settings-updated'));
 
-        console.log('✅ Navigation tabs saved successfully');
     } catch (error: any) {
         console.error('❌ Failed to save navigation tabs:', error);
         throw new Error(error.response?.data?.error || 'Failed to save tabs');
@@ -102,11 +109,6 @@ export const invalidateTabsCache = (): void => {
 // ============================================
 // SITE SETTINGS API
 // ============================================
-
-export interface SiteSettings {
-    siteTitle?: string;
-    siteHeader?: string;
-}
 
 let siteSettingsCache: { data: SiteSettings | null; timestamp: number } = {
     data: null,
@@ -132,14 +134,12 @@ export const getSiteSettings = async (): Promise<SiteSettings> => {
 
 export const invalidateSiteSettingsCache = (): void => {
     siteSettingsCache = { data: null, timestamp: 0 };
-    console.log('🔄 Site settings cache invalidated');
 };
 
 export const saveSiteSettings = async (settings: SiteSettings): Promise<void> => {
     try {
         await api.put('/api/settings/site', settings);
         siteSettingsCache = { data: { ...siteSettingsCache.data, ...settings }, timestamp: Date.now() };
-        console.log('✅ Site settings saved successfully');
     } catch (error: any) {
         console.error('❌ Failed to save site settings:', error);
         throw new Error(error.response?.data?.error || 'Failed to save settings');

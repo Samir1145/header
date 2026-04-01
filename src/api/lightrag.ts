@@ -259,11 +259,13 @@ export const queryText = async (backendFreeBaseUrl:string, request: QueryRequest
   return response.data
 }
 
-export const queryTextStream = async (
-  backendFreeBaseUrl:string,
+// Shared stream implementation — handles NDJSON streaming with abort/cleanup support
+const _runQueryStream = async (
+  backendUrl: string,
   request: QueryRequest,
   onChunk: (chunk: string) => void,
-  onError?: (error: string) => void
+  onError?: (error: string) => void,
+  signal?: AbortSignal
 ) => {
   const apiKey = useSettingsStore.getState().apiKey;
 
@@ -276,358 +278,134 @@ export const queryTextStream = async (
     headers['X-API-Key'] = apiKey;
   }
 
-  try {
-    const streamUrl = `${backendFreeBaseUrl}/query/stream`
+  const streamUrl = `${backendUrl}/query/stream`;
 
+  try {
     const response = await fetch(streamUrl, {
       method: 'POST',
-      headers: headers,
+      headers,
       body: JSON.stringify(request),
+      signal,
     });
-
 
     if (!response.ok) {
       if (response.status === 401) {
-        console.warn('⚠️ Stream auth failed for:', streamUrl)
+        console.warn('⚠️ Stream auth failed for:', streamUrl);
         throw new Error('Authentication required');
       }
 
       let errorBody = 'Unknown error';
-      try {
-        errorBody = await response.text();
-      } catch { /* ignore */ }
+      try { errorBody = await response.text(); } catch { /* ignore */ }
 
-      console.error('❌ queryStream error:', response.status, errorBody, streamUrl)
+      console.error('❌ queryStream error:', response.status, errorBody, streamUrl);
       throw new Error(
-        `${response.status} ${response.statusText}\n${JSON.stringify(
-          { error: errorBody }
-        )}\n${streamUrl}`
+        `${response.status} ${response.statusText}\n${JSON.stringify({ error: errorBody })}\n${streamUrl}`
       );
     }
 
-    if (!response.body) {
-      throw new Error('Response body is null');
-    }
+    if (!response.body) throw new Error('Response body is null');
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break; // Stream finished
-      }
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      // Decode the chunk and add to buffer
-      buffer += decoder.decode(value, { stream: true }); // stream: true handles multi-byte chars split across chunks
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
 
-      // Process complete lines (NDJSON)
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep potentially incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.response) {
-              onChunk(parsed.response);
-            } else if (parsed.error && onError) {
-              onError(parsed.error);
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const parsed = JSON.parse(line);
+              if (parsed.response) onChunk(parsed.response);
+              else if (parsed.error && onError) onError(parsed.error);
+            } catch {
+              if (onError) onError(`Error parsing server response: ${line}`);
             }
-          } catch (error) {
-            console.error('Error parsing stream chunk:', line, error);
-            if (onError) onError(`Error parsing server response: ${line}`);
           }
         }
       }
-    }
 
-    // Process any remaining data in the buffer after the stream ends
-    if (buffer.trim()) {
-      try {
-        const parsed = JSON.parse(buffer);
-        if (parsed.response) {
-          onChunk(parsed.response);
-        } else if (parsed.error && onError) {
-          onError(parsed.error);
+      if (buffer.trim()) {
+        try {
+          const parsed = JSON.parse(buffer);
+          if (parsed.response) onChunk(parsed.response);
+          else if (parsed.error && onError) onError(parsed.error);
+        } catch {
+          if (onError) onError(`Error parsing final server response: ${buffer}`);
         }
-      } catch (error) {
-        console.error('Error parsing final chunk:', buffer, error);
-        if (onError) onError(`Error parsing final server response: ${buffer}`);
       }
+    } finally {
+      reader.cancel();
     }
 
   } catch (error) {
+    if (signal?.aborted) return; // Intentional cancellation — not an error
+
     const message = errorMessage(error);
 
-    // Check if this is an authentication error
     if (message === 'Authentication required') {
-      // Already navigated to login page in the response.status === 401 block
-      console.error('Authentication required for stream request');
-      if (onError) {
-        onError('Authentication required');
-      }
-      return; // Exit early, no need for further error handling
+      if (onError) onError('Authentication required');
+      return;
     }
 
-    // Check for specific HTTP error status codes in the error message
     const statusCodeMatch = message.match(/^(\d{3})\s/);
     if (statusCodeMatch) {
       const statusCode = parseInt(statusCodeMatch[1], 10);
-
-      // Handle specific status codes with user-friendly messages
       let userMessage = message;
-
       switch (statusCode) {
-        case 403:
-          userMessage = 'You do not have permission to access this resource (403 Forbidden)';
-          console.error('Permission denied for stream request:', message);
-          break;
-        case 404:
-          userMessage = 'The requested resource does not exist (404 Not Found)';
-          console.error('Resource not found for stream request:', message);
-          break;
-        case 429:
-          userMessage = 'Too many requests, please try again later (429 Too Many Requests)';
-          console.error('Rate limited for stream request:', message);
-          break;
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-          userMessage = `Server error, please try again later (${statusCode})`;
-          console.error('Server error for stream request:', message);
-          break;
-        default:
-          console.error('Stream request failed with status code:', statusCode, message);
+        case 403: userMessage = 'You do not have permission to access this resource (403 Forbidden)'; break;
+        case 404: userMessage = 'The requested resource does not exist (404 Not Found)'; break;
+        case 429: userMessage = 'Too many requests, please try again later (429 Too Many Requests)'; break;
+        case 500: case 502: case 503: case 504:
+          userMessage = `Server error, please try again later (${statusCode})`; break;
+        default: break;
       }
-
-      if (onError) {
-        onError(userMessage);
-      }
+      if (onError) onError(userMessage);
       return;
     }
 
-    // Handle network errors (like connection refused, timeout, etc.)
-    if (message.includes('NetworkError') ||
-      message.includes('Failed to fetch') ||
-      message.includes('Network request failed')) {
-      console.error('Network error for stream request:', message);
-      if (onError) {
-        onError('Network connection error, please check your internet connection');
-      }
+    if (message.includes('NetworkError') || message.includes('Failed to fetch') || message.includes('Network request failed')) {
+      if (onError) onError('Network connection error, please check your internet connection');
       return;
     }
 
-    // Handle JSON parsing errors during stream processing
     if (message.includes('Error parsing') || message.includes('SyntaxError')) {
-      console.error('JSON parsing error in stream:', message);
-      if (onError) {
-        onError('Error processing response data');
-      }
+      if (onError) onError('Error processing response data');
       return;
     }
 
-    // Handle other errors
-    console.error('Unhandled stream error:', message);
-    if (onError) {
-      onError(message);
-    } else {
-      console.error('No error handler provided for stream error:', message);
-    }
+    if (onError) onError(message);
   }
 };
 
-
+export const queryTextStream = (
+  backendUrl: string,
+  request: QueryRequest,
+  onChunk: (chunk: string) => void,
+  onError?: (error: string) => void,
+  signal?: AbortSignal
+) => _runQueryStream(backendUrl, request, onChunk, onError, signal);
 
 export const queryFreeText = async (
-  backendFreeBaseUrl:string,request: QueryRequest): Promise<QueryResponse> => {
-  const response = await axiosInstance.post(backendFreeBaseUrl + '/query', request)
-  return response.data
-}
+  backendFreeBaseUrl: string, request: QueryRequest
+): Promise<QueryResponse> => {
+  const response = await axiosInstance.post(backendFreeBaseUrl + '/query', request);
+  return response.data;
+};
 
-export const queryFreeTextStream = async (
-  backendFreeBaseUrl:string,
+export const queryFreeTextStream = (
+  backendUrl: string,
   request: QueryRequest,
   onChunk: (chunk: string) => void,
-  onError?: (error: string) => void
-) => {
-  const apiKey = useSettingsStore.getState().apiKey;
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/x-ndjson',
-    'X-App-Source': 'vite',
-  };
-  if (apiKey) {
-    headers['X-API-Key'] = apiKey;
-  }
-
-
-
-  try {
-    const streamUrl = `${backendFreeBaseUrl}/query/stream`
-
-    const response = await fetch(streamUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(request),
-    });
-
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        console.warn('⚠️ Stream auth failed for:', streamUrl)
-        throw new Error('Authentication required');
-      }
-
-      let errorBody = 'Unknown error';
-      try {
-        errorBody = await response.text();
-      } catch { /* ignore */ }
-
-      console.error('❌ queryStream error:', response.status, errorBody, streamUrl)
-      throw new Error(
-        `${response.status} ${response.statusText}\n${JSON.stringify(
-          { error: errorBody }
-        )}\n${streamUrl}`
-      );
-    }
-
-    if (!response.body) {
-      throw new Error('Response body is null');
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        break; // Stream finished
-      }
-
-      // Decode the chunk and add to buffer
-      buffer += decoder.decode(value, { stream: true }); // stream: true handles multi-byte chars split across chunks
-
-      // Process complete lines (NDJSON)
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep potentially incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.response) {
-              onChunk(parsed.response);
-            } else if (parsed.error && onError) {
-              onError(parsed.error);
-            }
-          } catch (error) {
-            console.error('Error parsing stream chunk:', line, error);
-            if (onError) onError(`Error parsing server response: ${line}`);
-          }
-        }
-      }
-    }
-
-    // Process any remaining data in the buffer after the stream ends
-    if (buffer.trim()) {
-      try {
-        const parsed = JSON.parse(buffer);
-        if (parsed.response) {
-          onChunk(parsed.response);
-        } else if (parsed.error && onError) {
-          onError(parsed.error);
-        }
-      } catch (error) {
-        console.error('Error parsing final chunk:', buffer, error);
-        if (onError) onError(`Error parsing final server response: ${buffer}`);
-      }
-    }
-
-  } catch (error) {
-    const message = errorMessage(error);
-
-    // Check if this is an authentication error
-    if (message === 'Authentication required') {
-      // Already navigated to login page in the response.status === 401 block
-      console.error('Authentication required for stream request');
-      if (onError) {
-        onError('Authentication required');
-      }
-      return; // Exit early, no need for further error handling
-    }
-
-    // Check for specific HTTP error status codes in the error message
-    const statusCodeMatch = message.match(/^(\d{3})\s/);
-    if (statusCodeMatch) {
-      const statusCode = parseInt(statusCodeMatch[1], 10);
-
-      // Handle specific status codes with user-friendly messages
-      let userMessage = message;
-
-      switch (statusCode) {
-        case 403:
-          userMessage = 'You do not have permission to access this resource (403 Forbidden)';
-          console.error('Permission denied for stream request:', message);
-          break;
-        case 404:
-          userMessage = 'The requested resource does not exist (404 Not Found)';
-          console.error('Resource not found for stream request:', message);
-          break;
-        case 429:
-          userMessage = 'Too many requests, please try again later (429 Too Many Requests)';
-          console.error('Rate limited for stream request:', message);
-          break;
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-          userMessage = `Server error, please try again later (${statusCode})`;
-          console.error('Server error for stream request:', message);
-          break;
-        default:
-          console.error('Stream request failed with status code:', statusCode, message);
-      }
-
-      if (onError) {
-        onError(userMessage);
-      }
-      return;
-    }
-
-    // Handle network errors (like connection refused, timeout, etc.)
-    if (message.includes('NetworkError') ||
-      message.includes('Failed to fetch') ||
-      message.includes('Network request failed')) {
-      console.error('Network error for stream request:', message);
-      if (onError) {
-        onError('Network connection error, please check your internet connection');
-      }
-      return;
-    }
-
-    // Handle JSON parsing errors during stream processing
-    if (message.includes('Error parsing') || message.includes('SyntaxError')) {
-      console.error('JSON parsing error in stream:', message);
-      if (onError) {
-        onError('Error processing response data');
-      }
-      return;
-    }
-
-    // Handle other errors
-    console.error('Unhandled stream error:', message);
-    if (onError) {
-      onError(message);
-    } else {
-      console.error('No error handler provided for stream error:', message);
-    }
-  }
-};
+  onError?: (error: string) => void,
+  signal?: AbortSignal
+) => _runQueryStream(backendUrl, request, onChunk, onError, signal);
 
 export const insertText = async (text: string): Promise<DocActionResponse> => {
   const response = await axiosInstance.post(`${backendBaseUrl}/documents/text`, { text })

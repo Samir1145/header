@@ -54,20 +54,6 @@ export default function RetrievalTestingFree() {
        const matchedTab = useLoginUrl();
        const loginUrl = matchedTab || backendFreeBaseUrl;
 
-//       const allTabs = useNavigationTabsStore(state => state.tabs);
-//       const location = useLocation();
-//       const currentPath = location.pathname.replace(/^\/+/, '');
-    
-//       // Memoize matched tab only when tabs are ready
-//       const matchedTab = useMemo(() => {
-//         if (allTabs.length === 0) return null;
-//         return allTabs.find(tab => tab.path.replace(/^\/+/, '') === currentPath);
-//       }, [allTabs, currentPath]);
-    
-//       const loginUrl = matchedTab?.loginUrl || backendFreeBaseUrl;
-
-// console.log(allTabs,currentPath,'loginUrl',loginUrl)
-
     const scrollToBottom = useCallback(() => {
         programmaticScrollRef.current = true
         requestAnimationFrame(() => {
@@ -127,31 +113,35 @@ export default function RetrievalTestingFree() {
         setInputValue('')
         setIsLoading(true)
 
-        const updateAssistantMessage = (chunk: string, isError?: boolean) => {
-            assistantMessage.content += chunk
+        let accumulatedContent = '';
+        let accumulatedMermaid = false;
 
-            const mermaidBlockRegex = /```mermaid\s+([\s\S]+?)```/g
-            assistantMessage.mermaidRendered = false
-            let match
-            while ((match = mermaidBlockRegex.exec(assistantMessage.content)) !== null) {
+        const updateAssistantMessage = (chunk: string, isError?: boolean) => {
+            accumulatedContent += chunk;
+
+            const mermaidBlockRegex = /```mermaid\s+([\s\S]+?)```/g;
+            accumulatedMermaid = false;
+            let match;
+            while ((match = mermaidBlockRegex.exec(accumulatedContent)) !== null) {
                 if (match[1]?.trim().length > 10) {
-                    assistantMessage.mermaidRendered = true
-                    break
+                    accumulatedMermaid = true;
+                    break;
                 }
             }
 
-            setMessages(prev => {
-                const newMessages = [...prev]
-                const last = newMessages[newMessages.length - 1]
-                if (last.role === 'assistant') {
-                    last.content = assistantMessage.content
-                    last.isError = isError
-                    last.mermaidRendered = assistantMessage.mermaidRendered
-                }
-                return newMessages
-            })
+            const content = accumulatedContent;
+            const mermaidRendered = accumulatedMermaid;
 
-            if (shouldFollowScrollRef.current) setTimeout(scrollToBottom, 30)
+            setMessages(prev => {
+                const newMessages = [...prev];
+                const last = newMessages[newMessages.length - 1];
+                if (last.role === 'assistant') {
+                    newMessages[newMessages.length - 1] = { ...last, content, isError, mermaidRendered };
+                }
+                return newMessages;
+            });
+
+            if (shouldFollowScrollRef.current) setTimeout(scrollToBottom, 30);
         }
 
         const state = useSettingsStore.getState()

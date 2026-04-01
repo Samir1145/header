@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from 'sonner';
 import { useSettingsStore } from '@/stores/settings';
-import { getNavigationTabs, saveNavigationTabs, invalidateTabsCache } from '@/api/sqliteApi';
+import { getNavigationTabs, saveNavigationTabs, invalidateTabsCache, TabEntry } from '@/api/sqliteApi';
 
 type SubTab = {
   title: string;
@@ -132,58 +132,56 @@ const AdminTabSettings: React.FC = () => {
           // Handle both predefined tabs and dynamically added menus
           const mergedState: Record<string, TabAccess> = {};
 
+          const emptySubtabs = () => [
+            { title: "", path: "", loginUrl: "" },
+            { title: "", path: "", loginUrl: "" },
+            { title: "", path: "", loginUrl: "" },
+            { title: "", path: "", loginUrl: "" },
+            { title: "", path: "", loginUrl: "" },
+          ];
+
           // First, add predefined tabs
           TABS.forEach((tab, index) => {
-            const savedTab = (savedData as any)[tab.key] || {};
+            const savedTab = savedData[tab.key] as TabEntry | undefined || {};
             mergedState[tab.key] = {
               public: savedTab.public || false,
               admin: savedTab.admin || false,
               customHeading: savedTab.customHeading || "",
               order: savedTab.order !== undefined ? savedTab.order : index,
-              path: savedTab.path || "",
-              subtabs: savedTab.subtabs || [
-                { title: "", path: "", loginUrl: "" },
-                { title: "", path: "", loginUrl: "" },
-                { title: "", path: "", loginUrl: "" },
-                { title: "", path: "", loginUrl: "" },
-                { title: "", path: "", loginUrl: "" }
-              ]
+              path: savedTab.loginUrl || "",
+              subtabs: savedTab.subtabs || emptySubtabs(),
             };
           });
 
           // Then, add any dynamically added menus
           Object.keys(savedData).forEach(key => {
             if (!TABS.find(tab => tab.key === key) && key !== 'siteSettings' && key !== 'resourceTypes') {
-              const savedTab = (savedData as any)[key];
+              const savedTab = savedData[key] as TabEntry | undefined;
               if (savedTab && typeof savedTab === 'object' && 'customHeading' in savedTab) {
                 mergedState[key] = {
                   public: savedTab.public || false,
                   admin: savedTab.admin || false,
                   customHeading: savedTab.customHeading || "",
                   order: savedTab.order !== undefined ? savedTab.order : 999,
-                  path: savedTab.path || "",
-                  subtabs: savedTab.subtabs || [
-                    { title: "", path: "", loginUrl: "" },
-                    { title: "", path: "", loginUrl: "" },
-                    { title: "", path: "", loginUrl: "" },
-                    { title: "", path: "", loginUrl: "" },
-                    { title: "", path: "", loginUrl: "" }
-                  ]
+                  path: savedTab.loginUrl || "",
+                  subtabs: savedTab.subtabs || emptySubtabs(),
                 };
               }
             }
           });
           setTabState(mergedState);
 
-          if ((savedData as any).siteSettings) {
+          const savedSiteSettings = savedData.siteSettings as SiteSettings | undefined;
+          if (savedSiteSettings) {
             setSiteSettings({
-              siteTitle: (savedData as any).siteSettings.siteTitle || "",
-              siteHeader: (savedData as any).siteSettings.siteHeader || "",
+              siteTitle: savedSiteSettings.siteTitle || "",
+              siteHeader: savedSiteSettings.siteHeader || "",
             });
           }
 
-          if ((savedData as any).resourceTypes) {
-            setResourceTypes((savedData as any).resourceTypes);
+          const savedResourceTypes = savedData.resourceTypes as ResourceType[] | undefined;
+          if (savedResourceTypes) {
+            setResourceTypes(savedResourceTypes);
           }
         }
       } catch (error) {
@@ -309,7 +307,7 @@ const AdminTabSettings: React.FC = () => {
         ...normalizedState,
         siteSettings,
         resourceTypes,
-      } as any);
+      });
 
       toast.success("Access settings saved successfully!");
     } catch (error) {

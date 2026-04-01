@@ -30,14 +30,15 @@ app.use(cors({
 
 app.use(express.json({ limit: "1mb" }));
 
-// JWT Secret - generate a random one if not provided (warn in production)
-const JWT_SECRET = process.env.JWT_SECRET || (() => {
-    const generated = crypto.randomBytes(32).toString("hex");
+// JWT Secret - must be set via environment variable; random fallback only in development
+if (!process.env.JWT_SECRET) {
     if (process.env.NODE_ENV === "production") {
-        console.error("⚠️  WARNING: JWT_SECRET not set! Using random secret. Tokens will NOT survive restarts.");
+        console.error("FATAL: JWT_SECRET env var is not set in production. Exiting.");
+        process.exit(1);
     }
-    return generated;
-})();
+    console.warn("⚠️  WARNING: JWT_SECRET not set. Using random secret — all tokens will be invalidated on restart.");
+}
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
 const JWT_EXPIRES_IN = "7d";
 
 // Database file path
@@ -481,12 +482,24 @@ app.get("/api/admin/tabs", optionalAuth, (req, res) => {
     try {
         const config = getOne("SELECT config_value FROM admin_feature_tabs WHERE config_key = ?", ["access_config_new"]);
 
-        if (config) {
-            res.json(JSON.parse(config.config_value));
-        } else {
-            // Return default empty config
-            res.json({});
+        if (!config) {
+            return res.json({});
         }
+
+        const fullConfig = JSON.parse(config.config_value);
+
+        // Strip sensitive fields (IP addresses, file paths) for non-admin users
+        const isAdmin = req.user?.role === "admin";
+        if (!isAdmin) {
+            const filtered = {};
+            for (const [key, value] of Object.entries(fullConfig)) {
+                const { ipAddress: _ip, filePath: _fp, ...safe } = value;
+                filtered[key] = safe;
+            }
+            return res.json(filtered);
+        }
+
+        res.json(fullConfig);
     } catch (error) {
         console.error("Error fetching tabs:", error);
         res.status(500).json({ error: "Failed to fetch tabs configuration" });
@@ -951,8 +964,11 @@ app.post("/api/admin/bootstrap", async (req, res) => {
     try {
         const { email, secret } = req.body;
 
-        // Simple bootstrap security - require a secret or first user check
-        const bootstrapSecret = process.env.BOOTSTRAP_SECRET || "make-me-admin";
+        // Bootstrap security - BOOTSTRAP_SECRET must be explicitly set in environment
+        const bootstrapSecret = process.env.BOOTSTRAP_SECRET;
+        if (!bootstrapSecret) {
+            return res.status(503).json({ error: "Bootstrap endpoint is disabled. Set BOOTSTRAP_SECRET env var to enable." });
+        }
 
         if (secret !== bootstrapSecret) {
             return res.status(403).json({ error: "Invalid bootstrap secret" });

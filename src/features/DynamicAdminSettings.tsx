@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { getNavigationTabs, saveNavigationTabs } from '@/api/sqliteApi';
+import { getNavigationTabs, saveNavigationTabs, TabEntry } from '@/api/sqliteApi';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/state';
 
@@ -95,30 +95,33 @@ const DynamicAdminSettings: React.FC = () => {
   );
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchSettings = async () => {
       try {
         const savedData = await getNavigationTabs();
+        if (cancelled) return;
+
         if (savedData && Object.keys(savedData).length > 0) {
-          console.log('Loaded data from SQLite:', savedData);
-          
           const mergedState: Record<string, TabAccess> = currentTabs.reduce((acc, tab) => {
+            const entry = savedData[tab.key] as TabEntry | undefined;
             acc[tab.key] = {
-              public: savedData[tab.key]?.public || false,
-              stakeholders: savedData[tab.key]?.stakeholders || false,
-              team: savedData[tab.key]?.team || false,
-              admin: savedData[tab.key]?.admin || false,
-              customHeading: savedData[tab.key]?.customHeading || '',
-              ipAddress: savedData[tab.key]?.ipAddress || '',
-              filePath: savedData[tab.key]?.filePath || tab.path,
+              public: entry?.public || false,
+              stakeholders: entry?.stakeholders || false,
+              team: entry?.team || false,
+              admin: entry?.admin || false,
+              customHeading: entry?.customHeading || '',
+              ipAddress: entry?.ipAddress || '',
+              filePath: entry?.filePath || tab.path,
             };
             return acc;
           }, {} as Record<string, TabAccess>);
           setTabState(mergedState);
         } else {
-          console.log('No existing data found, using defaults');
           setTabState(initialState);
         }
       } catch (error) {
+        if (cancelled) return;
         console.error('Failed to load settings:', error);
         toast.error('Failed to load settings from database.');
         setTabState(initialState);
@@ -126,7 +129,8 @@ const DynamicAdminSettings: React.FC = () => {
     };
 
     fetchSettings();
-  }, [isLoggedIn]); 
+    return () => { cancelled = true; };
+  }, [isLoggedIn, currentTabs]);
 
   const handleCheck =
     (tabKey: string, field: keyof Omit<TabAccess, "customHeading" | "ipAddress" | "filePath">) =>
@@ -177,12 +181,6 @@ const DynamicAdminSettings: React.FC = () => {
     toast.info(`All ${currentTabs.length} tabs set to public for testing`);
   };
 
-  console.log('AVAILABLE_PATHS:', AVAILABLE_PATHS);
-  console.log('Current tabState:', tabState);
-  console.log('Current tabs:', currentTabs);
-  console.log('Tab state:', tabState);
-  console.log('Initial state:', initialState);
-  
   return (
     <div className="w-full h-full flex justify-center items-center p-4">
       <div className="card flex flex-col h-full w-full max-w-6xl min-h-0" style={{
@@ -286,8 +284,8 @@ const DynamicAdminSettings: React.FC = () => {
                               backgroundColor: "white", cursor: "pointer",
                               minHeight: "2.5rem",
                               appearance: "auto",
-                              WebkitAppearance: "auto",
-                              MozAppearance: "auto"
+                              WebkitAppearance: "menulist",
+                              MozAppearance: "menulist"
                             }}
                           >
                             <option value="">Select a path...</option>
