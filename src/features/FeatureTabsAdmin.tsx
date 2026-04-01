@@ -58,7 +58,7 @@ const BASE_URL_OPTIONS = [
   { value: "/forms2", label: "/forms2" },
   { value: "/graphs", label: "/graphs" },
   { value: "/documents", label: "/documents" },
-  { value: "/iframe", label: "/iframe" },
+  { value: "/iframe1", label: "/iframe1" },
   { value: "/iframe2", label: "/iframe2" },
   { value: "/iframe3", label: "/iframe3" },
   { value: "/iframe4", label: "/iframe4" },

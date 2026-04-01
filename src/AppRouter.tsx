@@ -75,7 +75,7 @@ export default function AppRouter() {
             <Route path="map4" element={<UshahidiMapPage4 />} />
             <Route path="map5" element={<UshahidiMapPage5 />} />
             <Route path="agents" element={<AgentsPage />} />
-            {['', '2','3','4','5','6','7','8','9','10','11','12','13','14'].map(n => (
+            {['1','2','3','4','5','6','7','8','9','10','11','12','13','14'].map(n => (
               <Route key={n} path={`iframe${n}`} element={<FramePage />} />
             ))}
             <Route path="resources/:resourceType" element={<ResourcesPage />} />
