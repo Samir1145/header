@@ -25,14 +25,6 @@ const WREN_API_URL = import.meta.env.VITE_WREN_API_URL;
 const WREN_API_KEY = import.meta.env.VITE_WREN_API_KEY;
 const USE_PROXY = import.meta.env.VITE_WREN_USE_PROXY === 'true';
 
-// Debug logging for configuration
-console.log('🔧 Wren Configuration:', {
-  apiUrl: WREN_API_URL,
-  hasApiKey: !!WREN_API_KEY,
-  apiKeyLength: WREN_API_KEY?.length || 0,
-  useProxy: USE_PROXY
-});
-
 export default function WrenChatPage(): React.ReactElement {
   const [messages, setMessages] = useState<MessageWithError[]>([]);
   const [inputValue, setInputValue] = useState('');

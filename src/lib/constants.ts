@@ -9,7 +9,6 @@ export const backendFreeBaseUrl4 = import.meta.env.VITE_BACKEND_URL_4 || 'https:
 export const backendFreeBaseUrl5 = import.meta.env.VITE_BACKEND_URL_5 || 'https://resolutionbazaar.com:9625'
 export const backendFreeBaseUrl6 = import.meta.env.VITE_BACKEND_URL_6 || 'https://resolutionbazaar.com:9626'
 
-console.log('🔧 Backend URLs:', { backendBaseUrl, backendFreeBaseUrl })
 
 // Server token configuration interface
 export interface ServerConfig {
@@ -42,12 +41,9 @@ export const getServerConfigs = (): ServerConfig[] => {
 // Get all available server configurations
 export const serverConfigs = getServerConfigs()
 
-// Debug: Log all loaded server configurations
-console.log('🔧 Loaded server configurations:', serverConfigs)
 
 // Function to get token for a specific server URL
 export const getTokenForServer = async (serverUrl: string): Promise<string | null> => {
-  console.log('🔍 getTokenForServer called with:', serverUrl)
   try {
     const response = await fetch(`${serverUrl}/login`, {
       method: 'POST',
@@ -70,7 +66,6 @@ export const getTokenForServer = async (serverUrl: string): Promise<string | nul
     const data = await response.json();
     // Try to get access_token from response
     if (data && typeof data.access_token === 'string') {
-      console.log('🔍 getTokenForServer found access token:', data.access_token);
       return data.access_token;
     }
     return null;

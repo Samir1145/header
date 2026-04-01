@@ -188,51 +188,53 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
   });
 
   // Fetch tabs from SQLite API with caching
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+
+      // Fetch tabs and site settings in parallel
+      const [tabConfig, settings] = await Promise.all([
+        getNavigationTabs(),
+        getSiteSettings()
+      ]);
+
+      // Transform and filter tabs
+      const transformedTabs = transformTabConfig(tabConfig, guestMode);
+      setTabs(transformedTabs);
+      useNavigationTabsStore.getState().setTabs(transformedTabs);
+
+      // Set site info
+      setSiteInfo({
+        siteTitle: settings.siteTitle || "",
+        siteHeader: settings.siteHeader || "",
+      });
+    } catch (err) {
+      console.error('Error loading header data:', err);
+      setTabs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [guestMode]);
+
   useEffect(() => {
     let isMounted = true;
 
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
+    fetchData();
 
-        // Fetch tabs and site settings in parallel
-        const [tabConfig, settings] = await Promise.all([
-          getNavigationTabs(),
-          getSiteSettings()
-        ]);
-
-        if (!isMounted) return;
-
-        // Transform and filter tabs
-        console.log('🔧 SiteHeader -> raw tabConfig from API:', JSON.stringify(tabConfig))
-        const transformedTabs = transformTabConfig(tabConfig, guestMode);
-        console.log('🔧 SiteHeader -> transformedTabs:', JSON.stringify(transformedTabs))
-        setTabs(transformedTabs);
-        useNavigationTabsStore.getState().setTabs(transformedTabs);
-
-        // Set site info
-        setSiteInfo({
-          siteTitle: settings.siteTitle || "",
-          siteHeader: settings.siteHeader || "",
-        });
-      } catch (err) {
-        console.error('Error loading header data:', err);
-        if (isMounted) {
-          setTabs([]);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+    // Listen for settings changes
+    const handleSettingsUpdate = () => {
+      if (isMounted) {
+        fetchData();
       }
     };
 
-    fetchData();
+    window.addEventListener('site-settings-updated', handleSettingsUpdate);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('site-settings-updated', handleSettingsUpdate);
     };
-  }, [guestMode]);
+  }, [fetchData]);
 
   // Memoized active tab calculation
   const activeTab = useMemo(() => {
@@ -262,12 +264,13 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
   return (
     <>
       <header className="bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex w-full items-center justify-between px-4 pt-4 pb-0">
-        {/* Left side - Logo + Branding */}
+        {/* Left side - Branding */}
         <div className="flex items-center min-w-[200px]">
-          <NavLink to={guestMode ? "/" : "/access"} className="flex items-center gap-2">
-            <img src="apnet_logo.jpeg" alt="Logo" className="h-8 w-auto" />
-            <span className="font-bold">{siteInfo.siteTitle || SiteInfo.name}</span>
-          </NavLink>
+          {siteInfo.siteTitle && (
+            <NavLink to={guestMode ? "/" : "/access"} className="flex items-center gap-2">
+              <span className="font-bold">{siteInfo.siteTitle}</span>
+            </NavLink>
+          )}
           {siteInfo.siteHeader && (
             <div className="ml-2 flex items-center">
               <span className="mx-1 text-xs text-gray-500">|</span>
@@ -297,9 +300,6 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
 
         {/* Right - Actions */}
         <div className="w-[200px] flex justify-end items-center gap-2">
-          <NavLink to={'/aboutus'} className='p-2 rounded-full hover:bg-muted transition-colors'>
-            <img src="advocate.png" alt="about us" className="h-5 w-5" />
-          </NavLink>
           {role === 'admin' && (
             <SettingsMenu role={role} />
           )}

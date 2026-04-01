@@ -6,15 +6,38 @@ const initSqlJs = require("sql.js");
 const fs = require("fs");
 const path = require("path");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const crypto = require("crypto");
 
 // Load environment variables
 require("dotenv").config();
 
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-in-production";
+const app = express();
+
+// CORS - restrict to known origins in production
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map(s => s.trim())
+    : ["http://localhost:5173", "http://localhost:4000", "http://localhost:9621"];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (curl, mobile apps, server-to-server)
+        if (!origin) return callback(null, true);
+        if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+        callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+}));
+
+app.use(express.json({ limit: "1mb" }));
+
+// JWT Secret - generate a random one if not provided (warn in production)
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+    const generated = crypto.randomBytes(32).toString("hex");
+    if (process.env.NODE_ENV === "production") {
+        console.error("⚠️  WARNING: JWT_SECRET not set! Using random secret. Tokens will NOT survive restarts.");
+    }
+    return generated;
+})();
 const JWT_EXPIRES_IN = "7d";
 
 // Database file path
@@ -50,6 +73,8 @@ async function initDatabase() {
       phone_number TEXT,
       role TEXT DEFAULT 'user' CHECK(role IN ('user', 'stakeholder', 'team', 'admin')),
       plan TEXT DEFAULT 'free' CHECK(plan IN ('free', 'premium', 'enterprise')),
+      reset_token TEXT,
+      reset_token_expiry TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -219,6 +244,11 @@ const optionalAuth = (req, res, next) => {
 // AUTH ENDPOINTS
 // ============================================
 
+// Email validation helper
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
 // Register
 app.post("/api/auth/register", async (req, res) => {
     try {
@@ -228,8 +258,16 @@ app.post("/api/auth/register", async (req, res) => {
             return res.status(400).json({ error: "Email and password are required" });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ error: "Password must be at least 6 characters" });
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ error: "Invalid email format" });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({ error: "Password must be at least 8 characters" });
+        }
+
+        if (fullName && fullName.length > 100) {
+            return res.status(400).json({ error: "Full name must be 100 characters or less" });
         }
 
         // Check if user exists
@@ -341,14 +379,68 @@ app.get("/api/auth/status", authenticateToken, (req, res) => {
     });
 });
 
-// Forgot password (simplified - just validates email exists)
+// Forgot password — generates a reset token (no email sending in local dev)
 app.post("/api/auth/forgot-password", (req, res) => {
     const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+    }
+
+    const user = getOne("SELECT id FROM users WHERE email = ?", [email]);
+    if (user) {
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const expiry = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+        run(
+            "UPDATE users SET reset_token = ?, reset_token_expiry = ?, updated_at = datetime('now') WHERE id = ?",
+            [resetToken, expiry, user.id]
+        );
+        console.log(`🔑 Password reset token for ${email}: ${resetToken}`);
+    }
 
     // Always return success to prevent email enumeration
     res.json({
         message: "If an account with that email exists, a password reset link has been sent."
     });
+});
+
+// Reset password with token
+app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({ error: "Token and new password are required" });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ error: "Password must be at least 8 characters" });
+        }
+
+        const user = getOne(
+            "SELECT id, reset_token_expiry FROM users WHERE reset_token = ?",
+            [token]
+        );
+
+        if (!user) {
+            return res.status(400).json({ error: "Invalid or expired reset token" });
+        }
+
+        if (new Date(user.reset_token_expiry) < new Date()) {
+            return res.status(400).json({ error: "Reset token has expired" });
+        }
+
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        run(
+            "UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL, updated_at = datetime('now') WHERE id = ?",
+            [passwordHash, user.id]
+        );
+
+        res.json({ message: "Password reset successful" });
+    } catch (error) {
+        console.error("Password reset error:", error);
+        res.status(500).json({ error: "Password reset failed" });
+    }
 });
 
 // ============================================
@@ -423,6 +515,25 @@ app.put("/api/admin/tabs", authenticateToken, (req, res) => {
                 `INSERT INTO admin_feature_tabs (config_key, config_value) VALUES (?, ?)`,
                 ["access_config_new", configValue]
             );
+        }
+
+        // Also save site settings to site_settings table for header display
+        if (req.body.siteSettings) {
+            const upsertSiteSetting = (key, value) => {
+                const existing = getOne("SELECT id FROM site_settings WHERE setting_key = ?", [key]);
+                if (existing) {
+                    run(`UPDATE site_settings SET setting_value = ?, updated_at = datetime('now') WHERE setting_key = ?`, [value, key]);
+                } else {
+                    run(`INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)`, [key, value]);
+                }
+            };
+
+            if (req.body.siteSettings.siteTitle !== undefined) {
+                upsertSiteSetting('siteTitle', req.body.siteSettings.siteTitle);
+            }
+            if (req.body.siteSettings.siteHeader !== undefined) {
+                upsertSiteSetting('siteHeader', req.body.siteSettings.siteHeader);
+            }
         }
 
         res.json({ message: "Tabs configuration updated successfully" });
@@ -902,22 +1013,13 @@ app.post("/api/admin/seed", (req, res) => {
                     { "title": "Forms", "path": "/forms", "loginUrl": "" }
                 ]
             },
-            "aboutus": {
-                "public": true,
-                "admin": true,
-                "stakeholders": true,
-                "team": true,
-                "customHeading": "About",
-                "order": 3,
-                "subtabs": []
-            },
             "admin": {
                 "public": false,
                 "admin": true,
                 "stakeholders": false,
                 "team": false,
                 "customHeading": "Admin",
-                "order": 4,
+                "order": 3,
                 "subtabs": [
                     { "title": "Documents", "path": "/access/idoc", "loginUrl": "" },
                     { "title": "Chat Logs", "path": "/access/ilog", "loginUrl": "" },
@@ -940,6 +1042,70 @@ app.post("/api/admin/seed", (req, res) => {
     } catch (error) {
         console.error("Error seeding data:", error);
         res.status(500).json({ error: "Seed failed" });
+    }
+});
+
+// ============================================
+// RESOURCES ENDPOINTS
+// ============================================
+
+app.get("/api/resources", (req, res) => {
+    try {
+        const { type } = req.query;
+
+        let sql = "SELECT * FROM resources WHERE is_active = 1";
+        const params = [];
+
+        if (type) {
+            sql += " AND type = ?";
+            params.push(type);
+        }
+
+        sql += " ORDER BY created_at DESC";
+
+        const resources = getAll(sql, params);
+        res.json(resources);
+    } catch (error) {
+        console.error("Error fetching resources:", error);
+        res.status(500).json({ error: "Failed to fetch resources" });
+    }
+});
+
+app.post("/api/resources", authenticateToken, (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ error: "Admin access required" });
+        }
+
+        const { title, description, type, url, filePath } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ error: "Title is required" });
+        }
+
+        const result = run(
+            `INSERT INTO resources (title, description, type, url, file_path) VALUES (?, ?, ?, ?, ?)`,
+            [title, description || null, type || null, url || null, filePath || null]
+        );
+
+        res.status(201).json({ id: result.lastInsertRowid, message: "Resource created" });
+    } catch (error) {
+        console.error("Error creating resource:", error);
+        res.status(500).json({ error: "Failed to create resource" });
+    }
+});
+
+app.delete("/api/resources/:id", authenticateToken, (req, res) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ error: "Admin access required" });
+        }
+
+        run("UPDATE resources SET is_active = 0, updated_at = datetime('now') WHERE id = ?", [req.params.id]);
+        res.json({ message: "Resource deleted" });
+    } catch (error) {
+        console.error("Error deleting resource:", error);
+        res.status(500).json({ error: "Failed to delete resource" });
     }
 });
 
@@ -967,7 +1133,8 @@ app.get("/", (req, res) => {
                 register: "POST /api/auth/register",
                 login: "POST /api/auth/login",
                 status: "GET /api/auth/status",
-                forgotPassword: "POST /api/auth/forgot-password"
+                forgotPassword: "POST /api/auth/forgot-password",
+                resetPassword: "POST /api/auth/reset-password"
             },
             users: {
                 me: "GET/PUT /api/users/me"
@@ -982,7 +1149,8 @@ app.get("/", (req, res) => {
                 categories: "GET/POST /api/forms/categories",
                 submissions: "GET/POST /api/forms/submissions"
             },
-            qna: "GET/POST /api/qna"
+            qna: "GET/POST /api/qna",
+            resources: "GET/POST/DELETE /api/resources"
         }
     });
 });

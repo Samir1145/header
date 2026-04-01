@@ -7,7 +7,6 @@ export function useLoginUrl() {
   const location = useLocation();
   const currentPath = location.pathname.replace(/^\/+/, ""); // normalize
 
-  console.log("🔍 useLoginUrl -> allTabs:", JSON.stringify(allTabs), "currentPath:", currentPath);
   const loginUrl = useMemo(() => {
     if (allTabs.length === 0) return null;
 
@@ -36,6 +35,5 @@ export function useLoginUrl() {
     return null;
   }, [allTabs, currentPath]);
 
-  console.log("🔍 useLoginUrl -> resolved loginUrl:", loginUrl);
   return loginUrl;
 }

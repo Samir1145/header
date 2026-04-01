@@ -391,16 +391,24 @@ export default function UshahidiMapPage3() {
   }, [applyMarkerFilter]);
 
   useEffect(() => {
-    // Use custom marker icon
-    const defaultIcon = new L.Icon({
-      iconUrl: 'leaflet/marker-icon.png',
-      iconRetinaUrl: 'leaflet/marker-icon-2x.png',
-      shadowUrl: 'leaflet/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
-    });
+    // Create custom location pin icon using SVG (smaller size)
+    const createLocationIcon = () => {
+      const svgIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="24" height="32">
+          <path fill="#ef4444" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/>
+        </svg>
+      `;
+
+      return L.divIcon({
+        html: svgIcon,
+        className: 'custom-location-icon',
+        iconSize: [24, 32],
+        iconAnchor: [12, 32],
+        popupAnchor: [0, -32],
+      });
+    };
+
+    const defaultIcon = createLocationIcon();
 
     if (!mapRef.current) {
       // Initialize map
@@ -432,66 +440,67 @@ export default function UshahidiMapPage3() {
         const data = await response.json();
         console.log('Fetched data:', data);
 
-        if (data.data && Array.isArray(data.data)) {
-          // Clear existing markers
-          allMarkersRef.current = [];
-          if (clusterRef.current) {
-            clusterRef.current.clearLayers();
+        // Handle Ushahidi API format
+        const posts = Array.isArray(data.results) ? data.results : [];
+        let markersAdded = 0;
+
+        posts.forEach((post: any, index: number) => {
+          // Dynamically find location data in values object
+          let locationArray = null;
+          if (post.values && typeof post.values === 'object') {
+            // Find the first array value that contains lat/lon
+            for (const key of Object.keys(post.values)) {
+              const value = post.values[key];
+              if (Array.isArray(value) && value.length > 0) {
+                const firstItem = value[0];
+                // Check if this item has lat/lon coordinates
+                if (firstItem && typeof firstItem === 'object' &&
+                    'lat' in firstItem && 'lon' in firstItem) {
+                  locationArray = value;
+                  break;
+                }
+              }
+            }
           }
 
-          // Process markers
-          let markersAdded = 0;
-          data.data.forEach((item: any, index: number) => {
-            if (item.geometry && item.geometry.type === 'Point' && item.geometry.coordinates) {
-              const [lng, lat] = item.geometry.coordinates;
-              
-              if (typeof lat === 'number' && typeof lng === 'number' && 
-                  lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                
-                // Store item data with unique ID
-                const itemId = `item_${itemIdCounterRef.current++}`;
-                itemDataMapRef.current.set(itemId, {
-                  title: item.properties?.title || 'Untitled',
-                  description: item.properties?.description || ''
-                });
-                
-                const marker = L.marker([lat, lng], { icon: defaultIcon }).bindPopup(`
-                  <div class="popup-content">
-                    <h3>${item.properties?.title || 'Untitled'}</h3>
-                    ${item.properties?.url ? `<a href="${item.properties.url}" target="_blank">View Details</a>` : ''}
+          if (Array.isArray(locationArray) && locationArray.length > 0) {
+            const { lat, lon } = locationArray[0];
+            if (lat && lon && clusterRef.current) {
+              // Store item data with unique ID
+              const itemId = `item_${itemIdCounterRef.current++}`;
+              itemDataMapRef.current.set(itemId, {
+                title: post.title || 'No Title',
+                description: post.content || ''
+              });
+
+              const marker = L.marker([lat, lon], { icon: defaultIcon })
+                .bindPopup(
+                  `<div class="popup-content">
+                    <b>${post.title || 'No Title'}</b>
                     <br><br>
-                    <button onclick="handleBuyNow('${itemId}')" 
-                            class="buy-now-btn" 
+                    <button onclick="handleBuyNow('${itemId}')"
+                            class="buy-now-btn"
                             style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">
                       Buy Now
                     </button>
-                  </div>
-                `);
+                  </div>`
+                );
 
-                allMarkersRef.current.push({
-                  lat,
-                  lng,
-                  marker,
-                  data: item.properties || {}
-                });
+              // Store marker for filtering
+              allMarkersRef.current.push({
+                lat,
+                lng: lon,
+                marker,
+                data: post
+              });
 
-                clusterRef.current.addLayer(marker);
-                markersAdded++;
-                
-                // Log every 10th marker for debugging
-                if (markersAdded % 10 === 0) {
-                  console.log(`Added ${markersAdded} markers so far...`);
-                }
-              } else {
-                console.log(`Invalid coordinates for item ${index}:`, { lat, lng });
-              }
-            } else {
-              console.log(`Invalid geometry for item ${index}:`, item.geometry);
+              clusterRef.current.addLayer(marker);
+              markersAdded++;
             }
-          });
+          }
+        });
 
-          console.log(`Added ${allMarkersRef.current.length} markers to map`);
-        }
+        console.log(`Added ${allMarkersRef.current.length} markers to map`);
 
         // Hide initial loading state after markers are loaded and rendered
         // Wait for cluster to be fully rendered before hiding loader

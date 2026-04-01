@@ -37,7 +37,6 @@ export const searchClaimant = async (claimantNumber: string): Promise<ClaimantDa
       },
     });
 
-    console.log('🔍 NEON API Response:', response.data);
     return response.data;
   } catch (error) {
     console.error('❌ Error fetching claimant data:', error);

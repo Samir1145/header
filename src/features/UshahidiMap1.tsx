@@ -442,25 +442,33 @@ useEffect(() => {
   allMarkersRef.current = [];
 
   // Ensure the map container exists
-  const mapContainer = document.getElementById('ushahidi-map');
+  const mapContainer = document.getElementById('ushahidi-map1');
   if (!mapContainer) {
     console.error('Map container not found');
     return;
   }
 
-  const map = L.map('ushahidi-map').setView([20, 78], 5);
+  const map = L.map('ushahidi-map1').setView([20, 78], 5);
   mapRef.current = map;
 
-  // Use custom marker icon
-  const defaultIcon = new L.Icon({
-    iconUrl: 'leaflet/marker-icon.png',
-    iconRetinaUrl: 'leaflet/marker-icon-2x.png',
-    shadowUrl: 'leaflet/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
-  });
+  // Create custom location pin icon using SVG (smaller size)
+  const createLocationIcon = () => {
+    const svgIcon = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="24" height="32">
+        <path fill="#ef4444" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/>
+      </svg>
+    `;
+
+    return L.divIcon({
+      html: svgIcon,
+      className: 'custom-location-icon',
+      iconSize: [24, 32],
+      iconAnchor: [12, 32],
+      popupAnchor: [0, -32],
+    });
+  };
+
+  const defaultIcon = createLocationIcon();
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
@@ -538,7 +546,24 @@ useEffect(() => {
       else {
         const posts = Array.isArray(data.results) ? data.results : [];
         posts.forEach((post: any) => {
-          const locationArray = post.values.location_default;
+          // Dynamically find location data in values object
+          let locationArray = null;
+          if (post.values && typeof post.values === 'object') {
+            // Find the first array value that contains lat/lon
+            for (const key of Object.keys(post.values)) {
+              const value = post.values[key];
+              if (Array.isArray(value) && value.length > 0) {
+                const firstItem = value[0];
+                // Check if this item has lat/lon coordinates
+                if (firstItem && typeof firstItem === 'object' &&
+                    'lat' in firstItem && 'lon' in firstItem) {
+                  locationArray = value;
+                  break;
+                }
+              }
+            }
+          }
+
           if (Array.isArray(locationArray) && locationArray.length > 0) {
             const { lat, lon } = locationArray[0];
               if (lat && lon && clusterRef.current) {
@@ -645,7 +670,7 @@ useEffect(() => {
 
   return (
     <div className="flex size-full gap-2 px-2 pb-12 overflow-hidden relative">
-      <div id="ushahidi-map" className="w-full h-full rounded-md" />
+      <div id="ushahidi-map1" className="w-full h-full rounded-md" />
       
       {/* Initial Loading Overlay */}
       {isInitialLoading && (

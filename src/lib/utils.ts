@@ -93,10 +93,10 @@ export const retryWithBackoff = async <T>(
       
       // Don't retry on authentication errors
       if (error && typeof error === 'object' && 'code' in error) {
-        const firebaseError = error as { code: string };
-        if (firebaseError.code === 'permission-denied' || 
-            firebaseError.code === 'unauthenticated' ||
-            firebaseError.code === 'invalid-argument') {
+        const errCode = (error as { code: string }).code;
+        if (errCode === 'permission-denied' ||
+            errCode === 'unauthenticated' ||
+            errCode === 'invalid-argument') {
           throw lastError;
         }
       }

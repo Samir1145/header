@@ -32,14 +32,13 @@ type SiteSettings = {
 
 type TabDef = { key: string };
 const TABS: TabDef[] = [
-  { key: "assets" }, { key: "forms" }, { key: "aboutus" },
+  { key: "assets" }, { key: "forms" },
   { key: "graphs" }, { key: "agents" }, { key: "appeals" }
 ];
 
 
 const BASE_URL_OPTIONS = [
   { value: "", label: "Select a path..." },
-  { value: "/aboutus", label: "/aboutus" },
   { value: "/retrieval", label: "/retrieval" },
   { value: "/retrieval2", label: "/retrieval2" },
   { value: "/retrieval3", label: "/retrieval3" },

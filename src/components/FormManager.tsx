@@ -54,14 +54,10 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
       setLoading(true);
       setError(null);
       
-      console.log('Loading forms and categories from Firebase...');
       const [formsData, categoriesData] = await Promise.all([
         FormManagementAPI.getAllFormSchemas(),
         FormManagementAPI.getAllFormCategories()
       ]);
-      
-      console.log('Loaded forms:', formsData.length, formsData);
-      console.log('Loaded categories:', categoriesData.length, categoriesData);
       
       setForms(formsData);
       setCategories(categoriesData);
@@ -149,9 +145,7 @@ export default function FormManager({ onFormSelect, selectedFormId }: FormManage
     try {
       setIsMigrating(true);
       setError(null);
-      console.log('Starting form migration...');
-      await FormManagementAPI.migrateExistingFormsToFirebase();
-      console.log('Migration completed successfully');
+      // Migration is a no-op — SQLite is the only backend
       setSuccess('Forms migrated successfully!');
       loadData();
     } catch (err) {

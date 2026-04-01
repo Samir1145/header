@@ -166,9 +166,6 @@ export default function RetrievalTestingFree() {
         }
 
         try {
-            console.log('🔍 RetrievalTestingFree -> loginUrl:', loginUrl, 'matchedTab:', matchedTab, 'backendFreeBaseUrl:', backendFreeBaseUrl)
-            console.log('🔍 RetrievalTestingFree -> queryParams:', queryParams)
-
             let fullAnswer = ''
 
             if (state.querySettings.stream) {

@@ -128,7 +128,7 @@ export function useFormManagement() {
   const migrateExistingForms = useCallback(async () => {
     try {
       setError(null);
-      await FormManagementAPI.migrateExistingFormsToFirebase();
+      // Migration is a no-op — SQLite is the only backend
       await loadForms();
       await loadCategories();
     } catch (err) {

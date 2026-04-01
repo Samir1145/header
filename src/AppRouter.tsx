@@ -17,7 +17,6 @@ import GraphViewer from '@/features/GraphViewer';
 import FeatureTabsAdmin from '@/features/FeatureTabsAdmin';
 import TempAdminSettings from '@/features/TempAdminSettings';
 import DynamicAdminSettings from '@/features/DynamicAdminSettings';
-import AboutPage from '@/features/AboutPage';
 import ResourcesPage from '@/features/ResourcesPage';
 import WrenChatPage from '@/features/WrenChatPage';
 import NeonSearchPage from '@/features/NeonSearchPage';
@@ -26,7 +25,7 @@ import { useAuthStore } from '@/stores/state';
 import { useLocation } from 'react-router-dom';
 import FormBuilderPage from '@/features/FormBuilderPage';
 import FormBuilderPage1 from '@/features/FormBuilderPage1';
-import FormBuilderPage2 from '@/features/FormBuilderPage1';
+import FormBuilderPage2 from '@/features/FormBuilderPage2';
 
 import RetrievalTestingFree2 from './features/RetrievalTestingFree2';
 import RetrievalTestingFree3 from './features/RetrievalTestingFree3';
@@ -88,7 +87,6 @@ export default function AppRouter() {
             <Route path="map3" element={<UshahidiMapPage3 />} />
             <Route path="map4" element={<UshahidiMapPage4 />} />
             <Route path="map5" element={<UshahidiMapPage5 />} />
-            <Route path="appeals" element={<AboutPage />} />
             <Route path="agents" element={<AgentsPage />} />
             <Route path="iframe" element={<FramePage />} />
             <Route path="iframe2" element={<FramePage2 />} />
@@ -104,7 +102,6 @@ export default function AppRouter() {
             <Route path="iframe12" element={<FramePage12 />} />
             <Route path="iframe13" element={<FramePage13 />} />
             <Route path="iframe14" element={<FramePage14 />} />
-            <Route path="aboutus" element={<AboutPage />} />
             <Route path="resources/:resourceType" element={<ResourcesPage />} />
             <Route path="wren-chat" element={<WrenChatPage />} />
             <Route path="neon-search" element={<NeonSearchPage />} />

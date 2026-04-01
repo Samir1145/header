@@ -81,8 +81,12 @@ export const saveNavigationTabs = async (config: TabConfig): Promise<void> => {
     try {
         await api.put('/api/admin/tabs', config);
 
-        // Invalidate cache
+        // Invalidate caches
         tabsCache = { data: config, timestamp: Date.now() };
+        invalidateSiteSettingsCache();
+
+        // Notify components to refresh
+        window.dispatchEvent(new CustomEvent('site-settings-updated'));
 
         console.log('✅ Navigation tabs saved successfully');
     } catch (error: any) {
@@ -124,6 +128,11 @@ export const getSiteSettings = async (): Promise<SiteSettings> => {
         console.error('❌ Failed to fetch site settings:', error);
         return siteSettingsCache.data || {};
     }
+};
+
+export const invalidateSiteSettingsCache = (): void => {
+    siteSettingsCache = { data: null, timestamp: 0 };
+    console.log('🔄 Site settings cache invalidated');
 };
 
 export const saveSiteSettings = async (settings: SiteSettings): Promise<void> => {

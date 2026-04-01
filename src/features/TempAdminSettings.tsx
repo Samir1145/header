@@ -17,14 +17,13 @@ const TABS: TabDef[] = [
   { key: "askip", label: "2. AskIP" },
   { key: "assets", label: "3. Assets" },
   { key: "forms", label: "4. Forms" },
-  { key: "aboutus", label: "5. About Us" },
-  { key: "login", label: "6. Login" },
-  { key: "graphs", label: "7. Graphs" },
-  { key: "agents", label: "8. Agents" },
-  { key: "documents", label: "9. Documents" },
-  { key: "wiki", label: "10. Wiki" },
-  { key: "logs", label: "11. Logs" },
-  { key: "profile", label: "12. Profile" },
+  { key: "login", label: "5. Login" },
+  { key: "graphs", label: "6. Graphs" },
+  { key: "agents", label: "7. Agents" },
+  { key: "documents", label: "8. Documents" },
+  { key: "wiki", label: "9. Wiki" },
+  { key: "logs", label: "10. Logs" },
+  { key: "profile", label: "11. Profile" },
 ];
 
 const initialState: Record<string, TabAccess> = Object.fromEntries(
@@ -45,7 +44,7 @@ const TempAdminSettings: React.FC = () => {
   const [tabState, setTabState] = useState(initialState);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load settings from Firebase on component mount
+  // Load settings on component mount
   useEffect(() => {
     const fetchSettings = async () => {
       try {

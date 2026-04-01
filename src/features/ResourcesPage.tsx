@@ -68,8 +68,6 @@ export default function ResourcesPage(): React.ReactElement {
           return;
         }
 
-        console.log('🔍 Fetching resources for type:', resourceType);
-
         let resources: ResourceRecord[] = [];
         try {
           const response = await api.get(`/api/resources?type=${encodeURIComponent(resourceType)}`);
@@ -85,7 +83,7 @@ export default function ResourcesPage(): React.ReactElement {
         console.log('📋 Found resources:', resources.length, resources);
         console.log('📋 All resources:', allResources.length, allResources);
 
-        // Convert Firebase resources to tree structure grouped by category
+        // Convert resources to tree structure grouped by category
         const tree = convertResourcesToTree(resources);
         setResourcesTree(tree);
         
@@ -109,7 +107,7 @@ export default function ResourcesPage(): React.ReactElement {
     fetchResources();
   }, [resourceType]);
 
-  // Convert Firebase resources to tree structure grouped by category
+  // Convert resources to tree structure grouped by category
   const convertResourcesToTree = (resources: ResourceRecord[]): TreeNode[] => {
     const categoryMap = new Map<string, ResourceNode[]>();
     

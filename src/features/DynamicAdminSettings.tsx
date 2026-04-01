@@ -58,7 +58,6 @@ const PRE_LOGIN_TABS: TabDef[] = [
   { key: "askip", label: "2. AskIP", path: '/map' },
   { key: "assets", label: "3. Assets", path: '/appeals' },
   { key: "forms", label: "4. Forms", path: '/forms' },
-  { key: "aboutus", label: "5. About Us", path: '/access' },
   { key: "login", label: "6. Login", path: '/login' },
 ];
 
