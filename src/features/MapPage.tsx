@@ -30,6 +30,9 @@ export default function MapPage({ mapId }: MapPageProps) {
   const matchedTab = useLoginUrl();
   const loginUrl = matchedTab || 'https://skillpedia.api.ushahidi.io/api/v3/posts';
 
+  // Debug: log which URL is being used for this map
+  console.log(`[MapPage ${mapId}] Using loginUrl:`, loginUrl, '(from useLoginUrl:)', matchedTab);
+
   const applyMarkerFilter = useCallback((center: { lat: number; lng: number } | null, radius: number) => {
     if (!clusterRef.current) return;
     clusterRef.current.clearLayers();
@@ -216,18 +219,8 @@ export default function MapPage({ mapId }: MapPageProps) {
     applyMarkerFilter(null, 0);
   }, [applyMarkerFilter]);
 
+  // Effect 1: initialize map once, clean up only on unmount
   useEffect(() => {
-    const createLocationIcon = () => {
-      const svgIcon = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="24" height="32">
-          <path fill="#ef4444" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/>
-        </svg>
-      `;
-      return L.divIcon({ html: svgIcon, className: 'custom-location-icon', iconSize: [24, 32], iconAnchor: [12, 32], popupAnchor: [0, -32] });
-    };
-
-    const defaultIcon = createLocationIcon();
-
     if (!mapRef.current) {
       mapRef.current = L.map(mapId).setView([20, 78], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -236,15 +229,45 @@ export default function MapPage({ mapId }: MapPageProps) {
       clusterRef.current = (L as any).markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50 });
       mapRef.current.addLayer(clusterRef.current);
     }
+    return () => {
+      if (radiusCircleRef.current) { radiusCircleRef.current.remove(); radiusCircleRef.current = null; }
+      if (clusterRef.current) { clusterRef.current.clearLayers(); clusterRef.current = null; }
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+      allMarkersRef.current = [];
+    };
+  }, [mapId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Effect 2: fetch data whenever the URL changes, cancel on cleanup
+  useEffect(() => {
+    if (!loginUrl) return;
+    let cancelled = false;
+
+    const createLocationIcon = () => {
+      const svgIcon = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="24" height="32">
+          <path fill="#ef4444" d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/>
+        </svg>
+      `;
+      return L.divIcon({ html: svgIcon, className: 'custom-location-icon', iconSize: [24, 32], iconAnchor: [12, 32], popupAnchor: [0, -32] });
+    };
+    const defaultIcon = createLocationIcon();
+
+    setIsInitialLoading(true);
+    if (clusterRef.current) { clusterRef.current.clearLayers(); }
+    allMarkersRef.current = [];
 
     const fetchData = async () => {
       try {
         const response = await fetch(loginUrl);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data = await response.json();
+        if (cancelled) return;
+
         const posts = Array.isArray(data.results) ? data.results : [];
+        console.log(`[MapPage ${mapId}] Fetched ${posts.length} posts from API`);
 
         posts.forEach((post: any) => {
+          if (cancelled) return;
           let locationArray = null;
           if (post.values && typeof post.values === 'object') {
             for (const key of Object.keys(post.values)) {
@@ -280,40 +303,45 @@ export default function MapPage({ mapId }: MapPageProps) {
           }
         });
 
+        if (cancelled) return;
         if (clusterRef.current && allMarkersRef.current.length > 0) {
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
               setTimeout(() => {
+                if (cancelled) return;
                 const visibleLayers = clusterRef.current?.getLayers()?.length || 0;
                 if (visibleLayers > 0) {
                   setIsInitialLoading(false);
                 } else {
-                  setTimeout(() => setIsInitialLoading(false), 2000);
+                  setTimeout(() => { if (!cancelled) setIsInitialLoading(false); }, 2000);
                 }
               }, 1000);
             });
           });
         } else {
-          setTimeout(() => setIsInitialLoading(false), 1000);
+          setTimeout(() => { if (!cancelled) setIsInitialLoading(false); }, 1000);
         }
       } catch (error) {
+        if (cancelled) return;
         console.error('Failed to load posts:', error);
-        setTimeout(() => setIsInitialLoading(false), 1000);
+        setTimeout(() => { if (!cancelled) setIsInitialLoading(false); }, 1000);
       }
     };
 
     fetchData();
-
-    return () => {
-      if (radiusCircleRef.current) { radiusCircleRef.current.remove(); radiusCircleRef.current = null; }
-      if (clusterRef.current) { clusterRef.current.clearLayers(); clusterRef.current = null; }
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
-      allMarkersRef.current = [];
-    };
-  }, [loginUrl, mapId]);
+    return () => { cancelled = true; };
+  }, [loginUrl]);
 
   return (
     <div className="w-full h-screen relative">
+      <LocationFilter
+        onLocationChange={handleLocationChange}
+        onNameSearch={handleNameSearch}
+        onCombinedSearch={handleCombinedSearch}
+        onClear={handleClearFilter}
+        className="absolute top-4 right-4 z-[100]"
+      />
+
       {isInitialLoading && (
         <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50">
           <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-lg shadow-lg border">
@@ -333,14 +361,7 @@ export default function MapPage({ mapId }: MapPageProps) {
           </div>
         </div>
       )}
-      <LocationFilter
-        onLocationChange={handleLocationChange}
-        onNameSearch={handleNameSearch}
-        onCombinedSearch={handleCombinedSearch}
-        onClear={handleClearFilter}
-        className="absolute top-4 right-4 z-[60]"
-      />
-      <div id={mapId} className="w-full h-full"></div>
+      <div id={mapId} className="w-full h-full relative z-0"></div>
       <BuyNowModal
         open={showBuyNowModal}
         onOpenChange={setShowBuyNowModal}
