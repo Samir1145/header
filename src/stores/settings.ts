@@ -72,6 +72,10 @@ interface SettingsState {
   // Menu style settings
   menuStyle: MenuStyle
   setMenuStyle: (style: MenuStyle) => void
+
+  // Home URL settings
+  homeUrl: string
+  setHomeUrl: (url: string) => void
 }
 
 const useSettingsStoreBase = create<SettingsState>()(
@@ -108,6 +112,8 @@ const useSettingsStoreBase = create<SettingsState>()(
       showFileName: false,
 
       menuStyle: 'two-row',
+
+      homeUrl: '',
 
       retrievalHistory: [],
 
@@ -173,7 +179,9 @@ const useSettingsStoreBase = create<SettingsState>()(
       setShowFileName: (show: boolean) => set({ showFileName: show }),
       setShowLegend: (show: boolean) => set({ showLegend: show }),
 
-      setMenuStyle: (menuStyle: MenuStyle) => set({ menuStyle })
+      setMenuStyle: (menuStyle: MenuStyle) => set({ menuStyle }),
+
+      setHomeUrl: (homeUrl: string) => set({ homeUrl })
     }),
     {
       name: 'settings-storage',

@@ -38,6 +38,15 @@ interface NavigationTab {
 function NavigationMenu({ tabs }: { tabs: NavigationTab[]; role?: string | null }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const homeUrl = useSettingsStore().homeUrl;
+
+  // Handle Home tab navigation
+  const handleHomeNavigation = () => {
+    if (homeUrl) {
+      // Open external URL in new tab
+      window.open(homeUrl, '_blank');
+    }
+  };
 
   const handleTabNavigation = useCallback((tab: NavigationTab) => {
     const validSubtabs = tab.subtabs.filter(subtab => subtab.title && subtab.path);
@@ -58,6 +67,20 @@ function NavigationMenu({ tabs }: { tabs: NavigationTab[]; role?: string | null 
 
   return (
     <div className="flex items-center gap-2">
+      {/* Home Tab */}
+      <div
+        onClick={handleHomeNavigation}
+        className={cn(
+          'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+          homeUrl
+            ? 'text-muted-foreground hover:bg-accent'
+            : 'text-muted-foreground cursor-not-allowed'
+        )}
+        title={homeUrl ? `Open ${homeUrl}` : 'Configure Home URL in Settings'}
+      >
+        Home
+      </div>
+
       {tabs.map(tab => (
         <div
           key={tab.value}

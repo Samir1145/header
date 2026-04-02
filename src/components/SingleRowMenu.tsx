@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ChevronDownIcon } from 'lucide-react';
+import { useSettingsStore } from '@/stores/settings';
 
 interface SubTab {
   title: string;
@@ -26,6 +27,15 @@ export default function SingleRowMenu({ tabs }: SingleRowMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const homeUrl = useSettingsStore.use.homeUrl();
+
+  // Handle Home tab navigation
+  const handleHomeNavigation = () => {
+    if (homeUrl) {
+      // Open external URL in new tab
+      window.open(homeUrl, '_blank');
+    }
+  };
 
   const handleTabNavigation = (tab: NavigationTab) => {
     // For single-row menu, prioritize directPath if available
@@ -62,6 +72,20 @@ export default function SingleRowMenu({ tabs }: SingleRowMenuProps) {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Home Tab */}
+      <div
+        onClick={handleHomeNavigation}
+        className={cn(
+          'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+          homeUrl
+            ? 'text-muted-foreground hover:bg-accent'
+            : 'text-muted-foreground cursor-not-allowed'
+        )}
+        title={homeUrl ? `Open ${homeUrl}` : 'Configure Home URL in Settings'}
+      >
+        Home
+      </div>
+
       {tabs.map(tab => {
         const validSubtabs = tab.subtabs.filter(subtab => subtab.title && subtab.path);
         const hasSubtabs = validSubtabs.length > 0;

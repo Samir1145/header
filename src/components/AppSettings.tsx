@@ -21,6 +21,9 @@ export default function AppSettings({ className }: AppSettingsProps) {
   const theme = useSettingsStore.use.theme()
   const setTheme = useSettingsStore.use.setTheme()
 
+  const homeUrl = useSettingsStore.use.homeUrl()
+  const setHomeUrl = useSettingsStore.use.setHomeUrl()
+
   const handleLanguageChange = useCallback((value: string) => {
     setLanguage(value as 'en' | 'zh' | 'fr' | 'ar' | 'zh_TW')
   }, [setLanguage])
@@ -29,6 +32,10 @@ export default function AppSettings({ className }: AppSettingsProps) {
     setTheme(value as 'light' | 'dark' | 'system')
   }, [setTheme])
 
+  const handleHomeUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setHomeUrl(e.target.value)
+  }, [setHomeUrl])
+
   return (
     <Popover open={opened} onOpenChange={setOpened}>
       <PopoverTrigger asChild>
@@ -36,8 +43,20 @@ export default function AppSettings({ className }: AppSettingsProps) {
           <PaletteIcon className="h-5 w-5" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent side="bottom" align="end" className="w-56">
+      <PopoverContent side="bottom" align="end" className="w-80">
         <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Home URL</label>
+            <input
+              type="url"
+              placeholder="https://example.com"
+              value={homeUrl}
+              onChange={handleHomeUrlChange}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            <p className="text-xs text-muted-foreground">Home tab will navigate to this URL</p>
+          </div>
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">{t('settings.language')}</label>
             <Select value={language} onValueChange={handleLanguageChange}>
