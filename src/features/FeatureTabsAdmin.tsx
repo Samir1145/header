@@ -383,9 +383,9 @@ const AdminTabSettings: React.FC = () => {
 
             {/* Home Tab Settings Section */}
             <div className="mb-6 border rounded-lg p-4 bg-blue-50">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">🏠 Home Tab Settings</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Home Tab Settings</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Configure the Home tab that appears in the navigation menu for all menu styles.
+                Configure the Home tab that appears first in the navigation menu for all menu styles. It navigates internally like any other tab.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -393,7 +393,7 @@ const AdminTabSettings: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                   <input
                     type="text"
-                    placeholder="Home"
+                    placeholder="Chat-Home"
                     value={homeTabSettings.title}
                     onChange={(e) => setHomeTabSettings({ ...homeTabSettings, title: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
@@ -401,26 +401,28 @@ const AdminTabSettings: React.FC = () => {
                   <p className="text-xs text-gray-500 mt-1">Display label for the Home tab</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Path</label>
-                  <input
-                    type="text"
-                    placeholder="/home"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Page</label>
+                  <select
                     value={homeTabSettings.path}
                     onChange={(e) => setHomeTabSettings({ ...homeTabSettings, path: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Internal app route (e.g., /home, /dashboard)</p>
+                  >
+                    {getUrlOptions(resourceTypes).map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Select the page this tab opens</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Chat URL</label>
                   <input
                     type="text"
-                    placeholder="https://example.com"
+                    placeholder="http://localhost:9621"
                     value={homeTabSettings.url}
                     onChange={(e) => setHomeTabSettings({ ...homeTabSettings, url: e.target.value })}
                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
                   />
-                  <p className="text-xs text-gray-500 mt-1">External URL (optional, overrides path)</p>
+                  <p className="text-xs text-gray-500 mt-1">Local chat API endpoint (e.g., http://localhost:9621)</p>
                 </div>
               </div>
             </div>

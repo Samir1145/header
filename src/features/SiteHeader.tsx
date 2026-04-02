@@ -39,16 +39,16 @@ function NavigationMenu({ tabs, homeTabSettings }: { tabs: NavigationTab[]; home
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Handle Home tab navigation
+  // Handle Home tab navigation — always internal
   const handleHomeNavigation = () => {
-    if (homeTabSettings.url) {
-      // Open external URL in current tab
-      window.location.href = homeTabSettings.url;
-    } else if (homeTabSettings.path) {
-      // Navigate to internal path
+    if (homeTabSettings.path) {
       navigate(homeTabSettings.path);
     }
   };
+
+  const isHomeTabActive = homeTabSettings.path
+    ? location.pathname === homeTabSettings.path || location.pathname.startsWith(homeTabSettings.path + '/')
+    : false;
 
   const handleTabNavigation = useCallback((tab: NavigationTab) => {
     const validSubtabs = tab.subtabs.filter(subtab => subtab.title && subtab.path);
@@ -70,34 +70,19 @@ function NavigationMenu({ tabs, homeTabSettings }: { tabs: NavigationTab[]; home
   return (
     <div className="flex items-center gap-2">
       {/* Home Tab */}
-      <div
-        onClick={handleHomeNavigation}
-        className={cn(
-          'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-          homeUrl
-            ? 'text-muted-foreground hover:bg-accent'
-            : 'text-muted-foreground cursor-not-allowed'
-        )}
-        title={homeUrl ? `Open ${homeUrl}` : 'Configure Home URL in Settings'}
-      >
-        Home
-      </div>
-
-      {/* Home Tab */}
-      <div
-        onClick={handleHomeNavigation}
-        className={cn(
-          'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-          homeTabSettings.url || homeTabSettings.path
-            ? 'text-muted-foreground hover:bg-accent'
-            : 'text-muted-foreground cursor-not-allowed'
-        )}
-        title={homeTabSettings.url || homeTabSettings.path
-          ? `Navigate to ${homeTabSettings.url || homeTabSettings.path}`
-          : 'Configure Home tab in Admin Settings'}
-      >
-        {homeTabSettings.title || 'Home'}
-      </div>
+      {homeTabSettings.path && (
+        <div
+          onClick={handleHomeNavigation}
+          className={cn(
+            'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+            isHomeTabActive
+              ? 'bg-emerald-400 text-white'
+              : 'text-muted-foreground hover:bg-accent'
+          )}
+        >
+          {homeTabSettings.title || 'Home'}
+        </div>
+      )}
 
       {tabs.map(tab => (
         <div
@@ -255,11 +240,12 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
         siteHeader: settings.siteHeader || "",
       });
 
-      // Set home tab settings
+      // Set home tab settings (stored in navigation tabs config)
+      const savedHomeTab = tabConfig.homeTabSettings as { title?: string; path?: string; url?: string } | undefined;
       setHomeTabSettings({
-        title: settings.homeTabSettings?.title || "Home",
-        path: settings.homeTabSettings?.path || "",
-        url: settings.homeTabSettings?.url || "",
+        title: savedHomeTab?.title || "Home",
+        path: savedHomeTab?.path || "",
+        url: savedHomeTab?.url || "",
       });
     } catch (err) {
       console.error('Error loading header data:', err);

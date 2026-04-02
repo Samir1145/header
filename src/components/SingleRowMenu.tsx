@@ -28,16 +28,16 @@ export default function SingleRowMenu({ tabs, homeTabSettings }: SingleRowMenuPr
   const location = useLocation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  // Handle Home tab navigation
+  // Handle Home tab navigation — always internal
   const handleHomeNavigation = () => {
-    if (homeTabSettings.url) {
-      // Open external URL in current tab
-      window.location.href = homeTabSettings.url;
-    } else if (homeTabSettings.path) {
-      // Navigate to internal path
+    if (homeTabSettings.path) {
       navigate(homeTabSettings.path);
     }
   };
+
+  const isHomeTabActive = homeTabSettings.path
+    ? location.pathname === homeTabSettings.path || location.pathname.startsWith(homeTabSettings.path + '/')
+    : false;
 
   const handleTabNavigation = (tab: NavigationTab) => {
     // For single-row menu, prioritize directPath if available
@@ -75,20 +75,19 @@ export default function SingleRowMenu({ tabs, homeTabSettings }: SingleRowMenuPr
   return (
     <div className="flex items-center gap-2">
       {/* Home Tab */}
-      <div
-        onClick={handleHomeNavigation}
-        className={cn(
-          'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-          homeTabSettings.url || homeTabSettings.path
-            ? 'text-muted-foreground hover:bg-accent'
-            : 'text-muted-foreground cursor-not-allowed'
-        )}
-        title={homeTabSettings.url || homeTabSettings.path
-          ? `Navigate to ${homeTabSettings.url || homeTabSettings.path}`
-          : 'Configure Home tab in Admin Settings'}
-      >
-        {homeTabSettings.title || 'Home'}
-      </div>
+      {homeTabSettings.path && (
+        <div
+          onClick={handleHomeNavigation}
+          className={cn(
+            'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+            isHomeTabActive
+              ? 'bg-emerald-400 text-white'
+              : 'text-muted-foreground hover:bg-accent'
+          )}
+        >
+          {homeTabSettings.title || 'Home'}
+        </div>
+      )}
 
       {tabs.map(tab => {
         const validSubtabs = tab.subtabs.filter(subtab => subtab.title && subtab.path);
