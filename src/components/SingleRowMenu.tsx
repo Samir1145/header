@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ChevronDownIcon } from 'lucide-react';
-import { useSettingsStore } from '@/stores/settings';
 
 interface SubTab {
   title: string;
@@ -21,19 +20,22 @@ interface NavigationTab {
 interface SingleRowMenuProps {
   tabs: NavigationTab[];
   role?: string | null;
+  homeTabSettings: { title: string; path: string; url: string };
 }
 
-export default function SingleRowMenu({ tabs }: SingleRowMenuProps) {
+export default function SingleRowMenu({ tabs, homeTabSettings }: SingleRowMenuProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const homeUrl = useSettingsStore.use.homeUrl();
 
   // Handle Home tab navigation
   const handleHomeNavigation = () => {
-    if (homeUrl) {
-      // Open external URL in new tab
-      window.open(homeUrl, '_blank');
+    if (homeTabSettings.url) {
+      // Open external URL in current tab
+      window.location.href = homeTabSettings.url;
+    } else if (homeTabSettings.path) {
+      // Navigate to internal path
+      navigate(homeTabSettings.path);
     }
   };
 
@@ -77,13 +79,15 @@ export default function SingleRowMenu({ tabs }: SingleRowMenuProps) {
         onClick={handleHomeNavigation}
         className={cn(
           'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
-          homeUrl
+          homeTabSettings.url || homeTabSettings.path
             ? 'text-muted-foreground hover:bg-accent'
             : 'text-muted-foreground cursor-not-allowed'
         )}
-        title={homeUrl ? `Open ${homeUrl}` : 'Configure Home URL in Settings'}
+        title={homeTabSettings.url || homeTabSettings.path
+          ? `Navigate to ${homeTabSettings.url || homeTabSettings.path}`
+          : 'Configure Home tab in Admin Settings'}
       >
-        Home
+        {homeTabSettings.title || 'Home'}
       </div>
 
       {tabs.map(tab => {

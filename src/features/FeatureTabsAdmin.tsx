@@ -30,6 +30,12 @@ type SiteSettings = {
   siteHeader: string;
 };
 
+type HomeTabSettings = {
+  title: string;
+  path: string;
+  url: string;
+};
+
 type TabDef = { key: string };
 const TABS: TabDef[] = [
   { key: "assets" }, { key: "forms" },
@@ -117,6 +123,11 @@ const AdminTabSettings: React.FC = () => {
     siteTitle: "",
     siteHeader: "",
   });
+  const [homeTabSettings, setHomeTabSettings] = useState<HomeTabSettings>({
+    title: "",
+    path: "",
+    url: "",
+  });
   const [resourceTypes, setResourceTypes] = useState<ResourceType[]>([]);
   const [newResourceType, setNewResourceType] = useState({ name: '', description: '' });
   const { menuStyle, setMenuStyle } = useSettingsStore();
@@ -176,6 +187,15 @@ const AdminTabSettings: React.FC = () => {
             setSiteSettings({
               siteTitle: savedSiteSettings.siteTitle || "",
               siteHeader: savedSiteSettings.siteHeader || "",
+            });
+          }
+
+          const savedHomeTabSettings = savedData.homeTabSettings as HomeTabSettings | undefined;
+          if (savedHomeTabSettings) {
+            setHomeTabSettings({
+              title: savedHomeTabSettings.title || "",
+              path: savedHomeTabSettings.path || "",
+              url: savedHomeTabSettings.url || "",
             });
           }
 
@@ -306,6 +326,7 @@ const AdminTabSettings: React.FC = () => {
       await saveNavigationTabs({
         ...normalizedState,
         siteSettings,
+        homeTabSettings,
         resourceTypes,
       });
 
@@ -357,6 +378,50 @@ const AdminTabSettings: React.FC = () => {
                   <option value="two-row">Two Row Menu (Current)</option>
                   <option value="single-row">Single Row Menu</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Home Tab Settings Section */}
+            <div className="mb-6 border rounded-lg p-4 bg-blue-50">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">🏠 Home Tab Settings</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Configure the Home tab that appears in the navigation menu for all menu styles.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    placeholder="Home"
+                    value={homeTabSettings.title}
+                    onChange={(e) => setHomeTabSettings({ ...homeTabSettings, title: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Display label for the Home tab</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Path</label>
+                  <input
+                    type="text"
+                    placeholder="/home"
+                    value={homeTabSettings.path}
+                    onChange={(e) => setHomeTabSettings({ ...homeTabSettings, path: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Internal app route (e.g., /home, /dashboard)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                  <input
+                    type="text"
+                    placeholder="https://example.com"
+                    value={homeTabSettings.url}
+                    onChange={(e) => setHomeTabSettings({ ...homeTabSettings, url: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">External URL (optional, overrides path)</p>
+                </div>
               </div>
             </div>
 

@@ -35,16 +35,18 @@ interface NavigationTab {
   directPath?: string;
 }
 
-function NavigationMenu({ tabs }: { tabs: NavigationTab[]; role?: string | null }) {
+function NavigationMenu({ tabs, homeTabSettings }: { tabs: NavigationTab[]; homeTabSettings: { title: string; path: string; url: string } }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const homeUrl = useSettingsStore().homeUrl;
 
   // Handle Home tab navigation
   const handleHomeNavigation = () => {
-    if (homeUrl) {
-      // Open external URL in new tab
-      window.open(homeUrl, '_blank');
+    if (homeTabSettings.url) {
+      // Open external URL in current tab
+      window.location.href = homeTabSettings.url;
+    } else if (homeTabSettings.path) {
+      // Navigate to internal path
+      navigate(homeTabSettings.path);
     }
   };
 
@@ -79,6 +81,22 @@ function NavigationMenu({ tabs }: { tabs: NavigationTab[]; role?: string | null 
         title={homeUrl ? `Open ${homeUrl}` : 'Configure Home URL in Settings'}
       >
         Home
+      </div>
+
+      {/* Home Tab */}
+      <div
+        onClick={handleHomeNavigation}
+        className={cn(
+          'cursor-pointer px-3 py-2 rounded-md text-sm font-medium transition-all',
+          homeTabSettings.url || homeTabSettings.path
+            ? 'text-muted-foreground hover:bg-accent'
+            : 'text-muted-foreground cursor-not-allowed'
+        )}
+        title={homeTabSettings.url || homeTabSettings.path
+          ? `Navigate to ${homeTabSettings.url || homeTabSettings.path}`
+          : 'Configure Home tab in Admin Settings'}
+      >
+        {homeTabSettings.title || 'Home'}
       </div>
 
       {tabs.map(tab => (
@@ -209,6 +227,11 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
     siteTitle: "",
     siteHeader: "",
   });
+  const [homeTabSettings, setHomeTabSettings] = useState<{ title: string; path: string; url: string }>({
+    title: "",
+    path: "",
+    url: "",
+  });
 
   // Fetch tabs from SQLite API with caching
   const fetchData = useCallback(async () => {
@@ -230,6 +253,13 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
       setSiteInfo({
         siteTitle: settings.siteTitle || "",
         siteHeader: settings.siteHeader || "",
+      });
+
+      // Set home tab settings
+      setHomeTabSettings({
+        title: settings.homeTabSettings?.title || "Home",
+        path: settings.homeTabSettings?.path || "",
+        url: settings.homeTabSettings?.url || "",
       });
     } catch (err) {
       console.error('Error loading header data:', err);
@@ -315,9 +345,9 @@ export default function SiteHeader({ guestMode = false }: { guestMode?: boolean 
           {isLoading ? (
             <div className="h-8 w-48 bg-muted animate-pulse rounded" />
           ) : menuStyle === 'single-row' ? (
-            <SingleRowMenu tabs={tabs} role={role} />
+            <SingleRowMenu tabs={tabs} role={role} homeTabSettings={homeTabSettings} />
           ) : (
-            <NavigationMenu tabs={tabs} role={role} />
+            <NavigationMenu tabs={tabs} homeTabSettings={homeTabSettings} />
           )}
         </div>
 
